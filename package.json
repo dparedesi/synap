@@ -1,0 +1,45 @@
+{
+  "name": "brain-dump",
+  "version": "0.1.0",
+  "description": "A CLI for externalizing your working memory",
+  "main": "src/cli.js",
+  "bin": {
+    "brain": "src/cli.js"
+  },
+  "scripts": {
+    "test": "vitest",
+    "test:run": "vitest run",
+    "lint": "eslint src/",
+    "postinstall": "node scripts/postinstall.js"
+  },
+  "keywords": [
+    "cli",
+    "brain-dump",
+    "productivity",
+    "notes",
+    "todos",
+    "ideas",
+    "ai-agent"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^14.0.0",
+    "uuid": "^11.0.0",
+    "update-notifier": "^7.0.0"
+  },
+  "devDependencies": {
+    "chalk": "^5.4.0",
+    "boxen": "^8.0.0",
+    "eslint": "^9.0.0",
+    "vitest": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "src/",
+    "scripts/",
+    ".claude/skills/"
+  ]
+}
