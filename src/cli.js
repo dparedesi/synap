@@ -26,14 +26,17 @@ async function main() {
     .description('A CLI for externalizing your working memory')
     .version(pkg.version);
 
+  // Load configuration
+  const config = storage.loadConfig();
+
   // ============================================
   // CAPTURE COMMANDS
   // ============================================
 
   program
     .command('add <content...>')
-    .description('Add a new entry (default: raw idea)')
-    .option('-t, --type <type>', 'Entry type (idea, project, feature, todo, question, reference, note)', 'idea')
+    .description(`Add a new entry (default: ${config.defaultType || 'idea'})`)
+    .option('-t, --type <type>', 'Entry type (idea, project, feature, todo, question, reference, note)', config.defaultType || 'idea')
     .option('--title <title>', 'Short title for the entry')
     .option('-p, --priority <priority>', 'Priority level (1=high, 2=medium, 3=low)')
     .option('--tags <tags>', 'Comma-separated tags')
@@ -41,12 +44,17 @@ async function main() {
     .option('--json', 'Output as JSON')
     .action(async (contentParts, options) => {
       const content = contentParts.join(' ');
+
+      // Merge config tags with CLI tags
+      const cliTags = options.tags ? options.tags.split(',').map(t => t.trim()) : [];
+      const tags = [...new Set([...(config.defaultTags || []), ...cliTags])];
+
       const entry = await storage.addEntry({
         content,
         title: options.title,
         type: options.type,
         priority: options.priority ? parseInt(options.priority, 10) : undefined,
-        tags: options.tags ? options.tags.split(',').map(t => t.trim()) : [],
+        tags,
         parent: options.parent,
         source: 'cli'
       });
@@ -69,11 +77,16 @@ async function main() {
     .option('--json', 'Output as JSON')
     .action(async (contentParts, options) => {
       const content = contentParts.join(' ');
+
+      // Merge config tags with CLI tags
+      const cliTags = options.tags ? options.tags.split(',').map(t => t.trim()) : [];
+      const tags = [...new Set([...(config.defaultTags || []), ...cliTags])];
+
       const entry = await storage.addEntry({
         content,
         type: 'todo',
         priority: options.priority ? parseInt(options.priority, 10) : undefined,
-        tags: options.tags ? options.tags.split(',').map(t => t.trim()) : [],
+        tags,
         parent: options.parent,
         source: 'cli'
       });
@@ -96,11 +109,16 @@ async function main() {
     .option('--json', 'Output as JSON')
     .action(async (contentParts, options) => {
       const content = contentParts.join(' ');
+
+      // Merge config tags with CLI tags
+      const cliTags = options.tags ? options.tags.split(',').map(t => t.trim()) : [];
+      const tags = [...new Set([...(config.defaultTags || []), ...cliTags])];
+
       const entry = await storage.addEntry({
         content,
         type: 'question',
         priority: options.priority ? parseInt(options.priority, 10) : undefined,
-        tags: options.tags ? options.tags.split(',').map(t => t.trim()) : [],
+        tags,
         parent: options.parent,
         source: 'cli'
       });
@@ -244,8 +262,29 @@ async function main() {
         }
         console.log(`  ${chalk.bold('Content:')}`);
         console.log(`  ${entry.content.split('\n').join('\n  ')}\n`);
-        console.log(`  ${chalk.gray('Created:')}  ${new Date(entry.createdAt).toLocaleString()}`);
-        console.log(`  ${chalk.gray('Updated:')}  ${new Date(entry.updatedAt).toLocaleString()}`);
+
+        // Date formatting based on config
+        const formatTime = (dateStr) => {
+          const date = new Date(dateStr);
+          if (config.dateFormat === 'relative') {
+            const now = new Date();
+            const diffMs = now - date;
+            const diffSec = Math.floor(diffMs / 1000);
+            const diffMin = Math.floor(diffSec / 60);
+            const diffHour = Math.floor(diffMin / 60);
+            const diffDay = Math.floor(diffHour / 24);
+
+            if (diffSec < 60) return 'just now';
+            if (diffMin < 60) return `${diffMin}m ago`;
+            if (diffHour < 24) return `${diffHour}h ago`;
+            if (diffDay < 7) return `${diffDay}d ago`;
+            return date.toLocaleDateString();
+          }
+          return date.toLocaleString();
+        };
+
+        console.log(`  ${chalk.gray('Created:')}  ${formatTime(entry.createdAt)}`);
+        console.log(`  ${chalk.gray('Updated:')}  ${formatTime(entry.updatedAt)}`);
         if (entry.source) {
           console.log(`  ${chalk.gray('Source:')}   ${entry.source}`);
         }
@@ -355,7 +394,7 @@ async function main() {
         const tmpFile = path.join(os.tmpdir(), `brain-${entry.id.slice(0, 8)}.txt`);
         fs.writeFileSync(tmpFile, entry.content);
 
-        const editor = process.env.EDITOR || 'vi';
+        const editor = config.editor || process.env.EDITOR || 'vi';
         try {
           execSync(`${editor} "${tmpFile}"`, { stdio: 'inherit' });
           updates.content = fs.readFileSync(tmpFile, 'utf8');

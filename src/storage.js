@@ -11,6 +11,7 @@ const { v4: uuidv4 } = require('uuid');
 const CONFIG_DIR = process.env.BRAIN_DUMP_DIR || path.join(os.homedir(), '.config', 'brain-dump');
 const ENTRIES_FILE = path.join(CONFIG_DIR, 'entries.json');
 const ARCHIVE_FILE = path.join(CONFIG_DIR, 'archive.json');
+const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
 // Valid types and statuses
 const VALID_TYPES = ['idea', 'project', 'feature', 'todo', 'question', 'reference', 'note'];
@@ -78,6 +79,37 @@ function loadArchive() {
 function saveArchive(data) {
   ensureConfigDir();
   atomicWriteSync(ARCHIVE_FILE, data);
+}
+
+/**
+ * Load configuration
+ */
+function loadConfig() {
+  ensureConfigDir();
+  const defaultConfig = {
+    defaultType: 'idea',
+    defaultTags: [],
+    editor: process.env.EDITOR || 'vi',
+    dateFormat: 'relative'
+  };
+
+  if (!fs.existsSync(CONFIG_FILE)) {
+    return defaultConfig;
+  }
+
+  try {
+    const userConfig = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+    const config = { ...defaultConfig, ...userConfig };
+
+    // Validate types to prevent runtime errors
+    if (!Array.isArray(config.defaultTags)) {
+      config.defaultTags = [];
+    }
+
+    return config;
+  } catch {
+    return defaultConfig;
+  }
 }
 
 /**
@@ -540,6 +572,7 @@ module.exports = {
   getStats,
   exportEntries,
   importEntries,
+  loadConfig,
   CONFIG_DIR,
   ENTRIES_FILE,
   ARCHIVE_FILE
