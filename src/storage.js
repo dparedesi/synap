@@ -131,6 +131,58 @@ function loadConfig() {
 }
 
 /**
+ * Get default configuration values
+ */
+function getDefaultConfig() {
+  return {
+    defaultType: 'idea',
+    defaultTags: [],
+    editor: null,
+    dateFormat: 'relative'
+  };
+}
+
+/**
+ * Validate a config key-value pair
+ * @returns {object} { valid: boolean, error?: string }
+ */
+function validateConfigValue(key, value) {
+  const defaults = getDefaultConfig();
+
+  if (!(key in defaults)) {
+    return { valid: false, error: `Unknown config key: ${key}. Valid keys: ${Object.keys(defaults).join(', ')}` };
+  }
+
+  switch (key) {
+    case 'defaultType':
+      if (!VALID_TYPES.includes(value)) {
+        return { valid: false, error: `Invalid type "${value}". Valid types: ${VALID_TYPES.join(', ')}` };
+      }
+      break;
+    case 'dateFormat':
+      if (!VALID_DATE_FORMATS.includes(value)) {
+        return { valid: false, error: `Invalid format "${value}". Valid formats: ${VALID_DATE_FORMATS.join(', ')}` };
+      }
+      break;
+    case 'defaultTags':
+      // Will be parsed as comma-separated string
+      break;
+    case 'editor':
+      // Any string or null is valid
+      break;
+  }
+  return { valid: true };
+}
+
+/**
+ * Save configuration to file
+ */
+function saveConfig(config) {
+  ensureConfigDir();
+  atomicWriteSync(CONFIG_FILE, config);
+}
+
+/**
  * Parse duration string to milliseconds
  * e.g., "7d" -> 7 days, "24h" -> 24 hours
  */
@@ -155,6 +207,15 @@ function parseDuration(duration) {
 async function addEntry(options) {
   const data = loadEntries();
 
+  // Resolve partial parent ID to full ID
+  let parentId = options.parent;
+  if (parentId) {
+    const parentEntry = data.entries.find(e => e.id.startsWith(parentId));
+    if (parentEntry) {
+      parentId = parentEntry.id;
+    }
+  }
+
   const now = new Date().toISOString();
   const entry = {
     id: uuidv4(),
@@ -164,7 +225,7 @@ async function addEntry(options) {
     status: 'raw',
     priority: options.priority && [1, 2, 3].includes(options.priority) ? options.priority : undefined,
     tags: options.tags || [],
-    parent: options.parent || undefined,
+    parent: parentId || undefined,
     related: [],
     createdAt: now,
     updatedAt: now,
@@ -233,7 +294,8 @@ async function getEntriesByIds(ids) {
  */
 async function getChildren(parentId) {
   const data = loadEntries();
-  return data.entries.filter(e => e.parent && e.parent.startsWith(parentId));
+  // Match if parent starts with the given ID OR if the given ID starts with parent
+  return data.entries.filter(e => e.parent && (e.parent.startsWith(parentId) || parentId.startsWith(e.parent)));
 }
 
 /**
@@ -267,6 +329,25 @@ async function listEntries(query = {}) {
     );
   }
 
+  // Filter by any tags (OR logic)
+  if (query.anyTags && query.anyTags.length > 0) {
+    entries = entries.filter(e =>
+      query.anyTags.some(tag => e.tags && e.tags.includes(tag))
+    );
+  }
+
+  // Exclude type
+  if (query.notType) {
+    entries = entries.filter(e => e.type !== query.notType);
+  }
+
+  // Exclude tags
+  if (query.notTags && query.notTags.length > 0) {
+    entries = entries.filter(e =>
+      !query.notTags.some(tag => e.tags && e.tags.includes(tag))
+    );
+  }
+
   // Filter by priority
   if (query.priority) {
     entries = entries.filter(e => e.priority === query.priority);
@@ -282,13 +363,33 @@ async function listEntries(query = {}) {
     entries = entries.filter(e => !e.parent);
   }
 
-  // Filter by since
+  // Filter by since (created after)
   if (query.since) {
     const ms = parseDuration(query.since);
     if (ms) {
       const cutoff = new Date(Date.now() - ms);
       entries = entries.filter(e => new Date(e.createdAt) >= cutoff);
     }
+  }
+
+  // Filter by before (created before)
+  if (query.before) {
+    const ms = parseDuration(query.before);
+    if (ms) {
+      const cutoff = new Date(Date.now() - ms);
+      entries = entries.filter(e => new Date(e.createdAt) < cutoff);
+    }
+  }
+
+  // Filter by date range (between)
+  if (query.between) {
+    const { start, end } = query.between;
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    entries = entries.filter(e => {
+      const created = new Date(e.createdAt);
+      return created >= startDate && created <= endDate;
+    });
   }
 
   // Include done if requested
@@ -334,16 +435,20 @@ async function searchEntries(query, options = {}) {
 
   const lowerQuery = query.toLowerCase();
 
-  // Text search
+  // Text search (content, title, and tags)
   entries = entries.filter(e => {
     const content = (e.content || '').toLowerCase();
     const title = (e.title || '').toLowerCase();
-    return content.includes(lowerQuery) || title.includes(lowerQuery);
+    const tagsStr = (e.tags || []).join(' ').toLowerCase();
+    return content.includes(lowerQuery) || title.includes(lowerQuery) || tagsStr.includes(lowerQuery);
   });
 
   // Apply filters
   if (options.type) {
     entries = entries.filter(e => e.type === options.type);
+  }
+  if (options.notType) {
+    entries = entries.filter(e => e.type !== options.notType);
   }
   if (options.status) {
     const statuses = options.status.split(',').map(s => s.trim());
@@ -531,6 +636,98 @@ async function getStats() {
 }
 
 /**
+ * Get all tags with counts
+ */
+async function getAllTags() {
+  const data = loadEntries();
+  const archive = loadArchive();
+  const allEntries = [...data.entries, ...archive.entries];
+
+  const tagCounts = {};
+  for (const entry of allEntries) {
+    for (const tag of entry.tags || []) {
+      tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+    }
+  }
+
+  return Object.entries(tagCounts)
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+/**
+ * Rename a tag across all entries
+ */
+async function renameTag(oldTag, newTag) {
+  const data = loadEntries();
+  const archive = loadArchive();
+  let count = 0;
+
+  for (const entry of data.entries) {
+    const idx = entry.tags.indexOf(oldTag);
+    if (idx !== -1) {
+      entry.tags[idx] = newTag;
+      entry.updatedAt = new Date().toISOString();
+      count++;
+    }
+  }
+
+  for (const entry of archive.entries) {
+    const idx = entry.tags.indexOf(oldTag);
+    if (idx !== -1) {
+      entry.tags[idx] = newTag;
+      entry.updatedAt = new Date().toISOString();
+      count++;
+    }
+  }
+
+  saveEntries(data);
+  saveArchive(archive);
+
+  return { oldTag, newTag, entriesUpdated: count };
+}
+
+/**
+ * Build tree structure from entries
+ */
+async function buildEntryTree(rootIds = null, maxDepth = 10) {
+  const data = loadEntries();
+  const entriesById = {};
+  const childrenByParent = {};
+
+  // Index entries
+  for (const entry of data.entries) {
+    entriesById[entry.id] = entry;
+    const parentKey = entry.parent || 'root';
+    if (!childrenByParent[parentKey]) childrenByParent[parentKey] = [];
+    childrenByParent[parentKey].push(entry);
+  }
+
+  // Build tree node recursively
+  function buildNode(entry, depth) {
+    if (depth >= maxDepth) return { ...entry, children: [] };
+    const children = (childrenByParent[entry.id] || [])
+      .map(c => buildNode(c, depth + 1));
+    return { ...entry, children };
+  }
+
+  // Get roots
+  let roots;
+  if (rootIds && rootIds.length > 0) {
+    roots = rootIds.map(id => {
+      // Support partial ID match
+      const entry = data.entries.find(e => e.id.startsWith(id));
+      return entry;
+    }).filter(Boolean);
+  } else {
+    // Get entries without parents
+    roots = childrenByParent['root'] || [];
+  }
+
+  return roots.map(e => buildNode(e, 0));
+}
+
+/**
  * Export entries
  */
 async function exportEntries(options = {}) {
@@ -588,9 +785,15 @@ module.exports = {
   deleteEntries,
   restoreEntries,
   getStats,
+  getAllTags,
+  renameTag,
+  buildEntryTree,
   exportEntries,
   importEntries,
   loadConfig,
+  getDefaultConfig,
+  validateConfigValue,
+  saveConfig,
   CONFIG_DIR,
   ENTRIES_FILE,
   ARCHIVE_FILE,

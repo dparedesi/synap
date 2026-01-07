@@ -156,6 +156,76 @@ async function main() {
       }
     });
 
+  // Helper function for type shorthand commands
+  const createTypeShorthand = (typeName, displayName = typeName) => {
+    return async (contentParts, options) => {
+      const content = contentParts.join(' ');
+      const tags = mergeTags(options.tags);
+
+      const entry = await storage.addEntry({
+        content,
+        type: typeName,
+        priority: options.priority ? parseInt(options.priority, 10) : undefined,
+        tags,
+        parent: options.parent,
+        source: 'cli'
+      });
+
+      if (options.json) {
+        console.log(JSON.stringify({ success: true, entry }, null, 2));
+      } else {
+        const shortId = entry.id.slice(0, 8);
+        const priorityBadge = entry.priority ? chalk.yellow(`[P${entry.priority}] `) : '';
+        console.log(chalk.green(`Added ${displayName} ${shortId}: `) + priorityBadge + `"${content.slice(0, 50)}${content.length > 50 ? '...' : ''}"`);
+      }
+    };
+  };
+
+  program
+    .command('idea <content...>')
+    .description('Add a new idea (shorthand for add --type idea)')
+    .option('-p, --priority <priority>', 'Priority level (1=high, 2=medium, 3=low)')
+    .option('--tags <tags>', 'Comma-separated tags')
+    .option('--parent <id>', 'Parent entry ID')
+    .option('--json', 'Output as JSON')
+    .action(createTypeShorthand('idea'));
+
+  program
+    .command('project <content...>')
+    .description('Add a new project (shorthand for add --type project)')
+    .option('-p, --priority <priority>', 'Priority level (1=high, 2=medium, 3=low)')
+    .option('--tags <tags>', 'Comma-separated tags')
+    .option('--parent <id>', 'Parent entry ID')
+    .option('--json', 'Output as JSON')
+    .action(createTypeShorthand('project'));
+
+  program
+    .command('feature <content...>')
+    .description('Add a new feature (shorthand for add --type feature)')
+    .option('-p, --priority <priority>', 'Priority level (1=high, 2=medium, 3=low)')
+    .option('--tags <tags>', 'Comma-separated tags')
+    .option('--parent <id>', 'Parent entry ID')
+    .option('--json', 'Output as JSON')
+    .action(createTypeShorthand('feature'));
+
+  program
+    .command('note <content...>')
+    .description('Add a new note (shorthand for add --type note)')
+    .option('-p, --priority <priority>', 'Priority level (1=high, 2=medium, 3=low)')
+    .option('--tags <tags>', 'Comma-separated tags')
+    .option('--parent <id>', 'Parent entry ID')
+    .option('--json', 'Output as JSON')
+    .action(createTypeShorthand('note'));
+
+  program
+    .command('ref <content...>')
+    .description('Add a new reference (shorthand for add --type reference)')
+    .option('-p, --priority <priority>', 'Priority level (1=high, 2=medium, 3=low)')
+    .option('--tags <tags>', 'Comma-separated tags')
+    .option('--parent <id>', 'Parent entry ID')
+    .option('--json', 'Output as JSON')
+    .action(createTypeShorthand('reference', 'reference'));
+
   // ============================================
   // QUERY COMMANDS
   // ============================================
@@ -166,10 +236,15 @@ async function main() {
     .option('-t, --type <type>', 'Filter by type')
     .option('-s, --status <status>', 'Filter by status (default: raw,active)')
     .option('--tags <tags>', 'Filter by tags (comma-separated, AND logic)')
+    .option('--any-tags <tags>', 'Filter by tags (comma-separated, OR logic)')
+    .option('--not-type <type>', 'Exclude entries of this type')
+    .option('--not-tags <tags>', 'Exclude entries with these tags')
     .option('-p, --priority <priority>', 'Filter by priority')
     .option('--parent <id>', 'Filter by parent')
     .option('--orphans', 'Only entries without parent')
     .option('--since <duration>', 'Created after (e.g., 7d, 24h)')
+    .option('--before <duration>', 'Created before (e.g., 7d, 24h)')
+    .option('--between <range>', 'Date range: start,end (e.g., 2025-01-01,2025-01-31)')
     .option('-a, --all', 'Include all statuses except archived')
     .option('--done', 'Include done entries')
     .option('--archived', 'Show only archived entries')
@@ -183,10 +258,18 @@ async function main() {
         type: options.type,
         status: options.archived ? 'archived' : (options.status || (options.all ? null : 'raw,active')),
         tags: options.tags ? options.tags.split(',').map(t => t.trim()) : undefined,
+        anyTags: options.anyTags ? options.anyTags.split(',').map(t => t.trim()) : undefined,
+        notType: options.notType,
+        notTags: options.notTags ? options.notTags.split(',').map(t => t.trim()) : undefined,
         priority: options.priority ? parseInt(options.priority, 10) : undefined,
         parent: options.parent,
         orphans: options.orphans,
         since: options.since,
+        before: options.before,
+        between: options.between ? (() => {
+          const [start, end] = options.between.split(',');
+          return { start: start.trim(), end: end.trim() };
+        })() : undefined,
         includeDone: options.done || options.all,
         limit: parseInt(options.limit, 10),
         sort: options.sort,
@@ -318,6 +401,7 @@ async function main() {
     .description('Full-text search across entries')
     .option('-t, --type <type>', 'Filter by type')
     .option('-s, --status <status>', 'Filter by status')
+    .option('--not-type <type>', 'Exclude entries of this type')
     .option('--since <duration>', 'Only search recent entries')
     .option('-n, --limit <n>', 'Max results', '20')
     .option('--json', 'Output as JSON')
@@ -326,6 +410,7 @@ async function main() {
       const result = await storage.searchEntries(query, {
         type: options.type,
         status: options.status,
+        notType: options.notType,
         since: options.since,
         limit: parseInt(options.limit, 10)
       });
@@ -901,6 +986,494 @@ async function main() {
         console.log(JSON.stringify({ success: true, ...result }));
       } else {
         console.log(chalk.green(`Imported ${result.added} new entries, updated ${result.updated} existing`));
+      }
+    });
+
+  // ============================================
+  // WORKFLOW COMMANDS
+  // ============================================
+
+  program
+    .command('tree [id]')
+    .description('Hierarchical view of entries')
+    .option('--depth <n>', 'Max depth to display', '10')
+    .option('--json', 'Output as JSON')
+    .action(async (id, options) => {
+      const maxDepth = parseInt(options.depth, 10);
+      const rootIds = id ? [id] : null;
+
+      const tree = await storage.buildEntryTree(rootIds, maxDepth);
+
+      if (tree.length === 0 && id) {
+        if (options.json) {
+          console.log(JSON.stringify({ success: false, error: `Entry not found: ${id}`, code: 'ENTRY_NOT_FOUND' }));
+        } else {
+          console.error(chalk.red(`Entry not found: ${id}`));
+        }
+        process.exit(1);
+      }
+
+      if (options.json) {
+        console.log(JSON.stringify({ success: true, tree }, null, 2));
+      } else {
+        if (tree.length === 0) {
+          console.log(chalk.gray('No entries found.'));
+          return;
+        }
+
+        // Render ASCII tree
+        function renderNode(node, prefix = '', isLast = true) {
+          const connector = isLast ? '└── ' : '├── ';
+          const shortId = node.id.slice(0, 8);
+          const typeBadge = chalk.cyan(`[${node.type}]`);
+          const title = node.title || node.content.slice(0, 40);
+          const priorityBadge = node.priority ? chalk.yellow(` [P${node.priority}]`) : '';
+          console.log(`${prefix}${connector}${chalk.blue(shortId)} ${typeBadge}${priorityBadge} ${title}`);
+
+          const childPrefix = prefix + (isLast ? '    ' : '│   ');
+          node.children.forEach((child, i) => {
+            renderNode(child, childPrefix, i === node.children.length - 1);
+          });
+        }
+
+        tree.forEach((root, i) => renderNode(root, '', i === tree.length - 1));
+      }
+    });
+
+  program
+    .command('focus')
+    .description('Show what to work on now: P1 todos + active projects')
+    .option('--json', 'Output as JSON')
+    .action(async (options) => {
+      // Get P1 todos
+      const p1Todos = await storage.listEntries({
+        type: 'todo',
+        priority: 1,
+        status: 'raw,active',
+        limit: 100
+      });
+
+      // Get active projects with progress
+      const projects = await storage.listEntries({
+        type: 'project',
+        status: 'active',
+        limit: 50
+      });
+
+      const projectsWithProgress = await Promise.all(
+        projects.entries.map(async (project) => {
+          const children = await storage.getChildren(project.id);
+          const total = children.length;
+          const done = children.filter(c => c.status === 'done').length;
+          const percent = total > 0 ? Math.round(done / total * 100) : 0;
+          return { ...project, progress: { total, done, percent } };
+        })
+      );
+
+      if (options.json) {
+        console.log(JSON.stringify({
+          success: true,
+          p1Todos: p1Todos.entries,
+          activeProjects: projectsWithProgress
+        }, null, 2));
+      } else {
+        console.log(chalk.bold('Focus: What to work on now\n'));
+
+        // P1 Todos
+        if (p1Todos.entries.length > 0) {
+          console.log(chalk.yellow.bold('P1 Todos:'));
+          for (const todo of p1Todos.entries) {
+            const shortId = todo.id.slice(0, 8);
+            const title = todo.title || todo.content.slice(0, 50);
+            console.log(`  ${chalk.blue(shortId)} ${title}`);
+          }
+          console.log();
+        } else {
+          console.log(chalk.gray('No P1 todos.\n'));
+        }
+
+        // Active Projects
+        if (projectsWithProgress.length > 0) {
+          console.log(chalk.green.bold('Active Projects:'));
+          for (const project of projectsWithProgress) {
+            const shortId = project.id.slice(0, 8);
+            const title = project.title || project.content.slice(0, 40);
+            const progressBar = project.progress.total > 0
+              ? ` [${project.progress.done}/${project.progress.total}] ${project.progress.percent}%`
+              : '';
+            console.log(`  ${chalk.blue(shortId)} ${title}${chalk.gray(progressBar)}`);
+          }
+        } else {
+          console.log(chalk.gray('No active projects.'));
+        }
+      }
+    });
+
+  program
+    .command('review [scope]')
+    .description('Guided review session (daily or weekly)')
+    .option('--json', 'Output as JSON')
+    .action(async (scope = 'daily', options) => {
+      const stats = await storage.getStats();
+
+      if (scope === 'daily') {
+        // Daily review: stats + raw entries + P1 items + stale
+        const rawEntries = await storage.listEntries({ status: 'raw', limit: 100 });
+        const p1Items = await storage.listEntries({ priority: 1, status: 'raw,active', limit: 100 });
+
+        // Stale items: not updated in 7 days
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const allActive = await storage.listEntries({ status: 'active', limit: 500 });
+        const staleItems = allActive.entries.filter(e => new Date(e.updatedAt) < sevenDaysAgo);
+
+        if (options.json) {
+          console.log(JSON.stringify({
+            success: true,
+            scope: 'daily',
+            stats,
+            rawCount: rawEntries.entries.length,
+            p1Items: p1Items.entries,
+            staleItems
+          }, null, 2));
+        } else {
+          console.log(chalk.bold('Daily Review\n'));
+          console.log(`Total entries: ${stats.total}`);
+          console.log(`  Raw: ${stats.byStatus.raw || 0}`);
+          console.log(`  Active: ${stats.byStatus.active || 0}`);
+          console.log(`  Done: ${stats.byStatus.done || 0}`);
+          console.log();
+
+          if (rawEntries.entries.length > 0) {
+            console.log(chalk.yellow(`${rawEntries.entries.length} entries need triage (brain triage)`));
+          }
+
+          if (p1Items.entries.length > 0) {
+            console.log(chalk.red.bold(`\n${p1Items.entries.length} P1 items:`));
+            for (const item of p1Items.entries.slice(0, 5)) {
+              console.log(`  ${chalk.blue(item.id.slice(0, 8))} ${item.title || item.content.slice(0, 50)}`);
+            }
+          }
+
+          if (staleItems.length > 0) {
+            console.log(chalk.gray(`\n${staleItems.length} stale items (not updated in 7 days)`));
+          }
+        }
+      } else if (scope === 'weekly') {
+        // Weekly review: completed this week + project progress
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const allDone = await storage.listEntries({ status: 'done', includeDone: true, limit: 500 });
+        const completedThisWeek = allDone.entries.filter(e => new Date(e.updatedAt) >= sevenDaysAgo);
+
+        const projects = await storage.listEntries({ type: 'project', status: 'active', limit: 50 });
+        const projectsWithProgress = await Promise.all(
+          projects.entries.map(async (project) => {
+            const children = await storage.getChildren(project.id);
+            const total = children.length;
+            const done = children.filter(c => c.status === 'done').length;
+            return { ...project, progress: { total, done, percent: total > 0 ? Math.round(done / total * 100) : 0 } };
+          })
+        );
+
+        if (options.json) {
+          console.log(JSON.stringify({
+            success: true,
+            scope: 'weekly',
+            completedThisWeek,
+            projectProgress: projectsWithProgress
+          }, null, 2));
+        } else {
+          console.log(chalk.bold('Weekly Review\n'));
+
+          console.log(chalk.green.bold(`Completed this week: ${completedThisWeek.length} items`));
+          for (const item of completedThisWeek.slice(0, 10)) {
+            console.log(`  ✓ ${item.title || item.content.slice(0, 50)}`);
+          }
+
+          if (projectsWithProgress.length > 0) {
+            console.log(chalk.blue.bold('\nProject Progress:'));
+            for (const project of projectsWithProgress) {
+              const title = project.title || project.content.slice(0, 40);
+              const bar = project.progress.total > 0
+                ? ` [${project.progress.done}/${project.progress.total}] ${project.progress.percent}%`
+                : ' (no children)';
+              console.log(`  ${title}${chalk.gray(bar)}`);
+            }
+          }
+        }
+      } else {
+        console.error(chalk.red(`Unknown scope: ${scope}. Use 'daily' or 'weekly'.`));
+        process.exit(1);
+      }
+    });
+
+  program
+    .command('triage')
+    .description('Interactive processing of raw entries')
+    .option('--auto', 'Non-interactive mode (just list raw entries)')
+    .option('--json', 'Output as JSON')
+    .action(async (options) => {
+      const rawEntries = await storage.listEntries({ status: 'raw', limit: 100 });
+
+      if (rawEntries.entries.length === 0) {
+        if (options.json) {
+          console.log(JSON.stringify({ success: true, count: 0, message: 'No raw entries to triage' }));
+        } else {
+          console.log(chalk.green('No raw entries to triage!'));
+        }
+        return;
+      }
+
+      // Non-interactive modes
+      if (options.auto || options.json) {
+        if (options.json) {
+          console.log(JSON.stringify({ success: true, rawEntries: rawEntries.entries }, null, 2));
+        } else {
+          console.log(chalk.bold(`${rawEntries.entries.length} raw entries to triage:\n`));
+          for (const entry of rawEntries.entries) {
+            const shortId = entry.id.slice(0, 8);
+            console.log(`  ${chalk.blue(shortId)} [${entry.type}] ${entry.content.slice(0, 60)}`);
+          }
+        }
+        return;
+      }
+
+      // Interactive mode
+      const { select, input } = await import('@inquirer/prompts');
+
+      console.log(chalk.bold(`\nTriaging ${rawEntries.entries.length} raw entries...\n`));
+
+      let processed = 0;
+      for (const entry of rawEntries.entries) {
+        console.log(boxen(entry.content, { padding: 1, title: `${entry.id.slice(0, 8)} [${entry.type}]`, borderColor: 'cyan' }));
+
+        const action = await select({
+          message: 'Action?',
+          choices: [
+            { value: 'classify', name: 'Classify (set type, priority, tags)' },
+            { value: 'skip', name: 'Skip for now' },
+            { value: 'done', name: 'Mark as done' },
+            { value: 'quit', name: 'Quit triage' }
+          ]
+        });
+
+        if (action === 'quit') {
+          console.log(chalk.yellow(`\nProcessed ${processed} entries. ${rawEntries.entries.length - processed} remaining.`));
+          break;
+        }
+
+        if (action === 'skip') {
+          continue;
+        }
+
+        if (action === 'done') {
+          await storage.updateEntry(entry.id, { status: 'done' });
+          console.log(chalk.green(`Marked as done.`));
+          processed++;
+          continue;
+        }
+
+        // Classify
+        const type = await select({
+          message: 'Type?',
+          choices: storage.VALID_TYPES.map(t => ({ value: t, name: t })),
+          default: entry.type
+        });
+
+        const priorityChoice = await select({
+          message: 'Priority?',
+          choices: [
+            { value: 'none', name: 'None' },
+            { value: '1', name: 'P1 (High)' },
+            { value: '2', name: 'P2 (Medium)' },
+            { value: '3', name: 'P3 (Low)' }
+          ]
+        });
+        const priority = priorityChoice === 'none' ? undefined : parseInt(priorityChoice, 10);
+
+        const tagsInput = await input({
+          message: 'Tags (comma-separated)?',
+          default: entry.tags.join(', ')
+        });
+        const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+        await storage.updateEntry(entry.id, {
+          type,
+          priority,
+          tags,
+          status: 'active'
+        });
+
+        console.log(chalk.green(`Updated ${entry.id.slice(0, 8)} → ${type}, P${priority || '-'}, tags: ${tags.join(', ') || 'none'}\n`));
+        processed++;
+      }
+
+      console.log(chalk.green.bold(`\nTriage complete! Processed ${processed} entries.`));
+    });
+
+  // ============================================
+  // CONFIGURATION COMMANDS
+  // ============================================
+
+  program
+    .command('config [key] [value]')
+    .description('View or update configuration')
+    .option('--reset', 'Reset to defaults')
+    .option('--json', 'Output as JSON')
+    .action(async (key, value, options) => {
+      const currentConfig = storage.loadConfig();
+      const defaults = storage.getDefaultConfig();
+
+      // Reset to defaults
+      if (options.reset) {
+        storage.saveConfig(defaults);
+        if (options.json) {
+          console.log(JSON.stringify({ success: true, config: defaults, message: 'Config reset to defaults' }));
+        } else {
+          console.log(chalk.green('Config reset to defaults'));
+        }
+        return;
+      }
+
+      // No key: show all config
+      if (!key) {
+        if (options.json) {
+          console.log(JSON.stringify({ success: true, config: currentConfig, defaults }, null, 2));
+        } else {
+          console.log(chalk.bold('Configuration:\n'));
+          for (const [k, v] of Object.entries(currentConfig)) {
+            const isDefault = JSON.stringify(v) === JSON.stringify(defaults[k]);
+            const defaultNote = isDefault ? chalk.gray(' (default)') : '';
+            const displayValue = Array.isArray(v) ? v.join(', ') || '(none)' : (v === null ? '(null)' : v);
+            console.log(`  ${chalk.cyan(k)}: ${displayValue}${defaultNote}`);
+          }
+          console.log(chalk.gray('\nUse: brain config <key> <value> to set a value'));
+        }
+        return;
+      }
+
+      // Key only: get specific value
+      if (value === undefined) {
+        if (!(key in defaults)) {
+          if (options.json) {
+            console.log(JSON.stringify({ success: false, error: `Unknown config key: ${key}`, code: 'INVALID_KEY' }));
+          } else {
+            console.error(chalk.red(`Unknown config key: ${key}`));
+            console.error(chalk.gray(`Valid keys: ${Object.keys(defaults).join(', ')}`));
+          }
+          process.exit(1);
+        }
+        if (options.json) {
+          console.log(JSON.stringify({ success: true, key, value: currentConfig[key] }));
+        } else {
+          const v = currentConfig[key];
+          const displayValue = Array.isArray(v) ? v.join(', ') || '(none)' : (v === null ? '(null)' : v);
+          console.log(displayValue);
+        }
+        return;
+      }
+
+      // Key + value: set value
+      const validation = storage.validateConfigValue(key, value);
+      if (!validation.valid) {
+        if (options.json) {
+          console.log(JSON.stringify({ success: false, error: validation.error, code: 'VALIDATION_ERROR' }));
+        } else {
+          console.error(chalk.red(validation.error));
+        }
+        process.exit(1);
+      }
+
+      // Parse value appropriately
+      let parsedValue = value;
+      if (key === 'defaultTags') {
+        parsedValue = value.split(',').map(t => t.trim()).filter(Boolean);
+      } else if (key === 'editor' && (value === 'null' || value === '')) {
+        parsedValue = null;
+      }
+
+      currentConfig[key] = parsedValue;
+      storage.saveConfig(currentConfig);
+
+      if (options.json) {
+        console.log(JSON.stringify({ success: true, key, value: parsedValue }));
+      } else {
+        const displayValue = Array.isArray(parsedValue) ? parsedValue.join(', ') : parsedValue;
+        console.log(chalk.green(`Set ${key} = ${displayValue}`));
+      }
+    });
+
+  program
+    .command('tags [action] [args...]')
+    .description('Tag management (list, rename)')
+    .option('--unused', 'Show tags only in deletion log (orphaned)')
+    .option('--json', 'Output as JSON')
+    .action(async (action, args, options) => {
+      // Handle rename action
+      if (action === 'rename') {
+        if (args.length < 2) {
+          if (options.json) {
+            console.log(JSON.stringify({ success: false, error: 'Usage: brain tags rename <old> <new>', code: 'INVALID_ARGS' }));
+          } else {
+            console.error(chalk.red('Usage: brain tags rename <old> <new>'));
+          }
+          process.exit(1);
+        }
+        const [oldTag, newTag] = args;
+        const result = await storage.renameTag(oldTag, newTag);
+
+        if (options.json) {
+          console.log(JSON.stringify({ success: true, ...result }));
+        } else {
+          console.log(chalk.green(`Renamed "${oldTag}" to "${newTag}" in ${result.entriesUpdated} entries`));
+        }
+        return;
+      }
+
+      // Handle --unused flag
+      if (options.unused) {
+        const currentTags = await storage.getAllTags();
+        const currentTagSet = new Set(currentTags.map(t => t.tag));
+        const log = await deletionLog.getLog();
+
+        const deletedTags = new Set();
+        for (const entry of log) {
+          for (const tag of entry.tags || []) {
+            deletedTags.add(tag);
+          }
+        }
+
+        const unusedTags = [...deletedTags].filter(t => !currentTagSet.has(t));
+
+        if (options.json) {
+          console.log(JSON.stringify({ success: true, unusedTags }));
+        } else {
+          if (unusedTags.length === 0) {
+            console.log(chalk.gray('No unused tags found.'));
+          } else {
+            console.log(chalk.bold('Unused tags (from deleted entries):\n'));
+            for (const tag of unusedTags) {
+              console.log(`  ${chalk.gray('#')}${tag}`);
+            }
+          }
+        }
+        return;
+      }
+
+      // Default: list all tags
+      const tags = await storage.getAllTags();
+
+      if (options.json) {
+        console.log(JSON.stringify({ success: true, tags }, null, 2));
+      } else {
+        if (tags.length === 0) {
+          console.log(chalk.gray('No tags found.'));
+          return;
+        }
+        console.log(chalk.bold('Tags:\n'));
+        for (const { tag, count } of tags) {
+          const countStr = count === 1 ? '1 entry' : `${count} entries`;
+          console.log(`  ${chalk.cyan('#' + tag.padEnd(20))} ${countStr}`);
+        }
       }
     });
 

@@ -57,9 +57,14 @@ interface Entry {
 | `brain add <text>` | Quick capture |
 | `brain todo <text>` | Add todo |
 | `brain question <text>` | Add question |
+| `brain idea <text>` | Add idea |
+| `brain project <text>` | Add project |
+| `brain feature <text>` | Add feature |
+| `brain note <text>` | Add note |
+| `brain ref <text>` | Add reference |
 | `brain list` | List entries |
 | `brain show <id>` | Show details |
-| `brain search <query>` | Full-text search |
+| `brain search <query>` | Full-text search (includes tags) |
 | `brain edit <id>` | Edit content |
 | `brain set <id>` | Update metadata |
 | `brain done <id>` | Mark done |
@@ -67,7 +72,24 @@ interface Entry {
 | `brain delete <id>` | Delete (logged) |
 | `brain restore` | Restore deleted |
 | `brain stats` | Statistics |
+| `brain tree [id]` | Hierarchical view |
+| `brain focus` | P1 todos + active projects |
+| `brain review [daily\|weekly]` | Guided review session |
+| `brain triage` | Interactive raw entry processing |
+| `brain config [key] [value]` | View/update configuration |
+| `brain tags` | List all tags with counts |
+| `brain tags rename <old> <new>` | Rename tag across entries |
 | `brain install-skill` | Install Claude skill |
+
+### Enhanced Filters (v0.3.0)
+
+```bash
+brain list --any-tags work,personal   # OR logic for tags
+brain list --not-type reference       # Exclude type
+brain list --not-tags archived        # Exclude entries with tag
+brain list --before 7d                # Entries older than 7 days
+brain list --between 2025-01-01,2025-01-31  # Date range
+```
 
 ## Testing
 
