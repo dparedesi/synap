@@ -13,9 +13,10 @@ const ENTRIES_FILE = path.join(CONFIG_DIR, 'entries.json');
 const ARCHIVE_FILE = path.join(CONFIG_DIR, 'archive.json');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
-// Valid types and statuses
+// Valid types, statuses, and date formats
 const VALID_TYPES = ['idea', 'project', 'feature', 'todo', 'question', 'reference', 'note'];
 const VALID_STATUSES = ['raw', 'active', 'someday', 'done', 'archived'];
+const VALID_DATE_FORMATS = ['relative', 'absolute', 'locale'];
 
 /**
  * Ensure config directory exists
@@ -89,7 +90,7 @@ function loadConfig() {
   const defaultConfig = {
     defaultType: 'idea',
     defaultTags: [],
-    editor: process.env.EDITOR || 'vi',
+    editor: null, // Falls back to EDITOR env var in CLI
     dateFormat: 'relative'
   };
 
@@ -101,13 +102,30 @@ function loadConfig() {
     const userConfig = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
     const config = { ...defaultConfig, ...userConfig };
 
-    // Validate types to prevent runtime errors
+    // Validate defaultType
+    if (!VALID_TYPES.includes(config.defaultType)) {
+      console.warn(`Warning: Invalid defaultType "${config.defaultType}" in config. Using "idea".`);
+      config.defaultType = 'idea';
+    }
+
+    // Validate dateFormat
+    if (!VALID_DATE_FORMATS.includes(config.dateFormat)) {
+      console.warn(`Warning: Invalid dateFormat "${config.dateFormat}" in config. Using "relative".`);
+      config.dateFormat = 'relative';
+    }
+
+    // Validate defaultTags is array of strings
     if (!Array.isArray(config.defaultTags)) {
       config.defaultTags = [];
+    } else {
+      config.defaultTags = config.defaultTags
+        .filter(t => typeof t === 'string')
+        .map(t => t.trim());
     }
 
     return config;
-  } catch {
+  } catch (err) {
+    console.warn(`Warning: Could not parse config.json: ${err.message}`);
     return defaultConfig;
   }
 }
@@ -575,5 +593,8 @@ module.exports = {
   loadConfig,
   CONFIG_DIR,
   ENTRIES_FILE,
-  ARCHIVE_FILE
+  ARCHIVE_FILE,
+  VALID_TYPES,
+  VALID_STATUSES,
+  VALID_DATE_FORMATS
 };

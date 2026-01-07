@@ -29,6 +29,39 @@ async function main() {
   // Load configuration
   const config = storage.loadConfig();
 
+  // Helper: Merge config tags with CLI tags
+  const mergeTags = (cliTagsString) => {
+    const cliTags = cliTagsString ? cliTagsString.split(',').map(t => t.trim()) : [];
+    return [...new Set([...(config.defaultTags || []), ...cliTags])];
+  };
+
+  // Helper: Format time based on config.dateFormat
+  const formatTime = (dateStr) => {
+    const date = new Date(dateStr);
+
+    if (config.dateFormat === 'relative') {
+      const now = new Date();
+      const diffMs = now - date;
+      const diffSec = Math.floor(diffMs / 1000);
+      const diffMin = Math.floor(diffSec / 60);
+      const diffHour = Math.floor(diffMin / 60);
+      const diffDay = Math.floor(diffHour / 24);
+
+      if (diffSec < 60) return 'just now';
+      if (diffMin < 60) return `${diffMin}m ago`;
+      if (diffHour < 24) return `${diffHour}h ago`;
+      if (diffDay < 7) return `${diffDay}d ago`;
+      return date.toLocaleDateString();
+    }
+
+    if (config.dateFormat === 'absolute') {
+      return date.toISOString();
+    }
+
+    // 'locale' or default
+    return date.toLocaleString();
+  };
+
   // ============================================
   // CAPTURE COMMANDS
   // ============================================
@@ -44,10 +77,7 @@ async function main() {
     .option('--json', 'Output as JSON')
     .action(async (contentParts, options) => {
       const content = contentParts.join(' ');
-
-      // Merge config tags with CLI tags
-      const cliTags = options.tags ? options.tags.split(',').map(t => t.trim()) : [];
-      const tags = [...new Set([...(config.defaultTags || []), ...cliTags])];
+      const tags = mergeTags(options.tags);
 
       const entry = await storage.addEntry({
         content,
@@ -77,10 +107,7 @@ async function main() {
     .option('--json', 'Output as JSON')
     .action(async (contentParts, options) => {
       const content = contentParts.join(' ');
-
-      // Merge config tags with CLI tags
-      const cliTags = options.tags ? options.tags.split(',').map(t => t.trim()) : [];
-      const tags = [...new Set([...(config.defaultTags || []), ...cliTags])];
+      const tags = mergeTags(options.tags);
 
       const entry = await storage.addEntry({
         content,
@@ -109,10 +136,7 @@ async function main() {
     .option('--json', 'Output as JSON')
     .action(async (contentParts, options) => {
       const content = contentParts.join(' ');
-
-      // Merge config tags with CLI tags
-      const cliTags = options.tags ? options.tags.split(',').map(t => t.trim()) : [];
-      const tags = [...new Set([...(config.defaultTags || []), ...cliTags])];
+      const tags = mergeTags(options.tags);
 
       const entry = await storage.addEntry({
         content,
@@ -205,7 +229,8 @@ async function main() {
             const tags = entry.tags.length > 0 ? chalk.gray(' #' + entry.tags.join(' #')) : '';
             const title = entry.title || entry.content.slice(0, 40);
             const truncated = title.length > 40 ? '...' : '';
-            console.log(`  ${chalk.blue(shortId)}  ${priorityBadge} ${title}${truncated}${tags}`);
+            const timeStr = chalk.gray(formatTime(entry.createdAt));
+            console.log(`  ${chalk.blue(shortId)}  ${priorityBadge} ${title}${truncated}${tags} ${timeStr}`);
           }
           console.log('');
         }
@@ -262,26 +287,6 @@ async function main() {
         }
         console.log(`  ${chalk.bold('Content:')}`);
         console.log(`  ${entry.content.split('\n').join('\n  ')}\n`);
-
-        // Date formatting based on config
-        const formatTime = (dateStr) => {
-          const date = new Date(dateStr);
-          if (config.dateFormat === 'relative') {
-            const now = new Date();
-            const diffMs = now - date;
-            const diffSec = Math.floor(diffMs / 1000);
-            const diffMin = Math.floor(diffSec / 60);
-            const diffHour = Math.floor(diffMin / 60);
-            const diffDay = Math.floor(diffHour / 24);
-
-            if (diffSec < 60) return 'just now';
-            if (diffMin < 60) return `${diffMin}m ago`;
-            if (diffHour < 24) return `${diffHour}h ago`;
-            if (diffDay < 7) return `${diffDay}d ago`;
-            return date.toLocaleDateString();
-          }
-          return date.toLocaleString();
-        };
 
         console.log(`  ${chalk.gray('Created:')}  ${formatTime(entry.createdAt)}`);
         console.log(`  ${chalk.gray('Updated:')}  ${formatTime(entry.updatedAt)}`);
