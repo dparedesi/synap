@@ -45,3 +45,5 @@ Thumbs.db
 
 # Test output
 .nyc_output/
+
+.context

@@ -9,7 +9,13 @@ src/
   cli.js           # Entry point, all command definitions (Commander.js)
   storage.js       # Entry CRUD, JSON file handling, atomic writes
   deletion-log.js  # Audit log for deleted entries, enables restore
+  preferences.js   # User preferences read/write/validation
   skill-installer.js # Installs SKILL.md to ~/.claude/skills/
+  templates/
+    user-preferences-template.md # Default preferences template
+
+test/
+  *.test.js        # Test suite (16 files, vitest)
 
 scripts/
   postinstall.js   # npm postinstall - shows hints
@@ -31,6 +37,8 @@ This CLI follows the "Agent-Ready CLI" pattern:
 - `entries.json`: Active entries
 - `archive.json`: Archived entries
 - `deletion-log.json`: Audit log for restore capability
+- `config.json`: User configuration (defaultType, defaultTags, editor, dateFormat)
+- `user-preferences.md`: Agent-readable preferences
 - Atomic writes (write to .tmp, then rename)
 
 ### Entry Model
@@ -47,6 +55,7 @@ interface Entry {
   related?: string[];
   createdAt: string;
   updatedAt: string;
+  source?: 'cli' | 'agent' | 'import';  // Origin of entry
 }
 ```
 
@@ -80,6 +89,11 @@ interface Entry {
 | `brain tags` | List all tags with counts |
 | `brain tags rename <old> <new>` | Rename tag across entries |
 | `brain install-skill` | Install Claude skill |
+| `brain preferences` | View or update user preferences |
+| `brain setup` | Guided first-run wizard |
+| `brain link <id1> <id2>` | Link entries (--as-parent, --as-child, --unlink) |
+| `brain export` | Export entries (--file, --format, --type, --status) |
+| `brain import <file>` | Import entries (--merge, --skip-existing, --dry-run) |
 
 ### Enhanced Filters (v0.3.0)
 

@@ -11,6 +11,7 @@ const pkg = require('../package.json');
 // Storage and utility modules
 const storage = require('./storage');
 const deletionLog = require('./deletion-log');
+const preferences = require('./preferences');
 
 async function main() {
   // Dynamic imports for ESM-only packages
@@ -1308,6 +1309,229 @@ async function main() {
       }
 
       console.log(chalk.green.bold(`\nTriage complete! Processed ${processed} entries.`));
+    });
+
+  // ============================================
+  // PREFERENCES COMMANDS
+  // ============================================
+
+  program
+    .command('preferences')
+    .description('View or update user preferences')
+    .option('--edit', 'Open preferences in $EDITOR')
+    .option('--reset', 'Reset preferences to the default template')
+    .option('--confirm', 'Skip confirmation prompt when resetting')
+    .option('--append <values...>', 'Append text to a section')
+    .option('--json', 'Output as JSON')
+    .action(async (options) => {
+      const hasAppend = Array.isArray(options.append);
+      const activeFlags = [options.edit, options.reset, hasAppend].filter(Boolean).length;
+
+      const respondError = (message, code = 'INVALID_ARGS') => {
+        if (options.json) {
+          console.log(JSON.stringify({ success: false, error: message, code }));
+        } else {
+          console.error(chalk.red(message));
+        }
+        process.exit(1);
+      };
+
+      if (activeFlags > 1) {
+        respondError('Use only one of --edit, --reset, or --append');
+      }
+      try {
+        if (options.edit) {
+          if (options.json) {
+            respondError('Cannot use --json with --edit', 'INVALID_MODE');
+          }
+
+          preferences.loadPreferences();
+          const { execSync } = require('child_process');
+          const fs = require('fs');
+
+          const editor = config.editor || process.env.EDITOR || 'vi';
+          const preferencesPath = preferences.getPreferencesPath();
+          try {
+            execSync(`${editor} "${preferencesPath}"`, { stdio: 'inherit' });
+          } catch {
+            console.error(chalk.red('Editor failed or was cancelled'));
+            process.exit(1);
+          }
+
+          const updated = fs.readFileSync(preferencesPath, 'utf8');
+          const validation = preferences.validatePreferences(updated);
+          if (!validation.valid) {
+            console.error(chalk.red(`Invalid preferences: ${validation.error}`));
+            process.exit(1);
+          }
+
+          console.log(chalk.green('Preferences updated'));
+          return;
+        }
+
+        if (options.reset) {
+          if (!options.confirm && !options.json) {
+            const { confirm } = await import('@inquirer/prompts');
+            const confirmed = await confirm({
+              message: 'Reset preferences to the default template?',
+              default: false
+            });
+            if (!confirmed) {
+              console.log(chalk.gray('Cancelled'));
+              return;
+            }
+          }
+
+          const content = preferences.resetPreferences();
+          if (options.json) {
+            console.log(JSON.stringify({
+              success: true,
+              path: preferences.getPreferencesPath(),
+              content
+            }, null, 2));
+          } else {
+            console.log(chalk.green('Preferences reset to template'));
+          }
+          return;
+        }
+
+        if (hasAppend) {
+          const values = options.append || [];
+          if (values.length < 2) {
+            respondError('Usage: brain preferences --append "## Section" "Text to append"');
+          }
+
+          const [section, ...textParts] = values;
+          const text = textParts.join(' ');
+          const content = preferences.appendToSection(section, text);
+
+          if (options.json) {
+            console.log(JSON.stringify({
+              success: true,
+              path: preferences.getPreferencesPath(),
+              section,
+              text,
+              content
+            }, null, 2));
+          } else {
+            console.log(chalk.green(`Appended to ${section}`));
+          }
+          return;
+        }
+
+        const content = preferences.loadPreferences();
+        if (options.json) {
+          console.log(JSON.stringify({
+            success: true,
+            path: preferences.getPreferencesPath(),
+            lineCount: content.split(/\r?\n/).length,
+            content
+          }, null, 2));
+        } else {
+          console.log(content);
+        }
+      } catch (err) {
+        respondError(err.message || 'Failed to update preferences', 'PREFERENCES_ERROR');
+      }
+    });
+
+  // ============================================
+  // SETUP COMMANDS
+  // ============================================
+
+  program
+    .command('setup')
+    .description('Run the first-run setup wizard')
+    .option('--json', 'Output as JSON')
+    .action(async (options) => {
+      const fs = require('fs');
+
+      let hasEntries = false;
+      if (fs.existsSync(storage.ENTRIES_FILE)) {
+        try {
+          const data = JSON.parse(fs.readFileSync(storage.ENTRIES_FILE, 'utf8'));
+          hasEntries = Array.isArray(data.entries) && data.entries.length > 0;
+        } catch {
+          hasEntries = false;
+        }
+      }
+
+      let createdEntry = null;
+      if (!hasEntries) {
+        createdEntry = await storage.addEntry({
+          content: 'My first thought',
+          type: config.defaultType || 'idea',
+          source: 'setup'
+        });
+      }
+
+      let skillResult = { prompted: false };
+      if (!options.json) {
+        console.log('');
+        console.log(chalk.bold('Welcome to brain-dump!\n'));
+        console.log('Brain dump helps you externalize your working memory.');
+        console.log('Capture ideas, todos, projects, and questions.\n');
+
+        console.log('Let\'s get you set up:\n');
+
+        console.log('[1/3] Quick capture test...');
+        if (createdEntry) {
+          console.log(`      brain add "My first thought"`);
+          console.log(`      ${chalk.green('✓')} Created entry ${createdEntry.id.slice(0, 8)}`);
+        } else {
+          console.log(`      ${chalk.gray('Existing entries detected, skipping.')}`);
+        }
+
+        console.log('\n[2/3] Configuration...');
+        console.log(`      Default type: ${chalk.cyan(config.defaultType || 'idea')}`);
+        console.log(`      Change with: ${chalk.cyan('brain config defaultType todo')}`);
+
+        console.log('\n[3/3] Claude Code Integration');
+        const { confirm } = await import('@inquirer/prompts');
+        const shouldInstall = await confirm({
+          message: 'Install Claude skill for AI assistance?',
+          default: true
+        });
+
+        skillResult.prompted = true;
+        if (shouldInstall) {
+          const skillInstaller = require('./skill-installer');
+          try {
+            skillResult = { ...skillResult, ...(await skillInstaller.install()) };
+            if (skillResult.installed) {
+              console.log(`      ${chalk.green('✓')} Skill installed at ~/.claude/skills/brain-dump-assistant/`);
+            } else if (skillResult.skipped) {
+              console.log(`      ${chalk.yellow('•')} Skill already up to date`);
+            } else if (skillResult.needsForce) {
+              console.log(`      ${chalk.yellow('•')} Skill modified. Use ${chalk.cyan('brain install-skill --force')}`);
+            }
+          } catch (err) {
+            console.log(`      ${chalk.red('✗')} Skill install failed: ${err.message}`);
+            skillResult = { ...skillResult, error: err.message };
+          }
+        } else {
+          console.log(`      ${chalk.gray('Skipped skill install')}`);
+        }
+
+        console.log('\nYou\'re ready! Try these commands:');
+        console.log(`  ${chalk.cyan('brain todo "Something to do"')}`);
+        console.log(`  ${chalk.cyan('brain focus')}`);
+        console.log(`  ${chalk.cyan('brain review daily')}`);
+        console.log('');
+        return;
+      }
+
+      console.log(JSON.stringify({
+        success: true,
+        mode: hasEntries ? 'existing' : 'first-run',
+        entry: createdEntry,
+        config: { defaultType: config.defaultType || 'idea' },
+        skill: {
+          prompted: false,
+          installed: false,
+          message: 'Run brain install-skill to enable Claude Code integration'
+        }
+      }, null, 2));
     });
 
   // ============================================

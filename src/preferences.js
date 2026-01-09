@@ -1,0 +1,175 @@
+/**
+ * preferences.js - User preferences storage and helpers
+ */
+
+const fs = require('fs');
+const path = require('path');
+const storage = require('./storage');
+
+const TEMPLATE_PATH = path.join(__dirname, 'templates', 'user-preferences-template.md');
+const PREFERENCES_FILE = path.join(storage.CONFIG_DIR, 'user-preferences.md');
+const MAX_LINES = 500;
+
+function ensureConfigDir() {
+  if (!fs.existsSync(storage.CONFIG_DIR)) {
+    fs.mkdirSync(storage.CONFIG_DIR, { recursive: true });
+  }
+}
+
+function getPreferencesPath() {
+  return PREFERENCES_FILE;
+}
+
+function readTemplate() {
+  if (!fs.existsSync(TEMPLATE_PATH)) {
+    throw new Error(`Preferences template not found: ${TEMPLATE_PATH}`);
+  }
+  return fs.readFileSync(TEMPLATE_PATH, 'utf8');
+}
+
+function validatePreferences(content) {
+  if (typeof content !== 'string') {
+    return { valid: false, error: 'Preferences must be a string' };
+  }
+
+  if (content.includes('\0')) {
+    return { valid: false, error: 'Preferences contain invalid null bytes' };
+  }
+
+  const trimmedContent = content.replace(/(\r?\n)+$/, '');
+  const lineCount = trimmedContent.split(/\r?\n/).length;
+  if (lineCount > MAX_LINES) {
+    return { valid: false, error: `Preferences must be ${MAX_LINES} lines or fewer` };
+  }
+
+  return { valid: true };
+}
+
+function savePreferences(content) {
+  const validation = validatePreferences(content);
+  if (!validation.valid) {
+    throw new Error(validation.error);
+  }
+
+  ensureConfigDir();
+  const tmpPath = `${PREFERENCES_FILE}.tmp`;
+  fs.writeFileSync(tmpPath, content, 'utf8');
+  fs.renameSync(tmpPath, PREFERENCES_FILE);
+  return content;
+}
+
+function loadPreferences() {
+  ensureConfigDir();
+  if (!fs.existsSync(PREFERENCES_FILE)) {
+    const template = readTemplate();
+    savePreferences(template);
+    return template;
+  }
+
+  const content = fs.readFileSync(PREFERENCES_FILE, 'utf8');
+  const validation = validatePreferences(content);
+  if (!validation.valid) {
+    throw new Error(validation.error);
+  }
+  return content;
+}
+
+function resetPreferences() {
+  const template = readTemplate();
+  return savePreferences(template);
+}
+
+function parseSectionTarget(section) {
+  const trimmed = section.trim();
+  if (!trimmed) {
+    throw new Error('Section name is required');
+  }
+
+  const match = trimmed.match(/^(#{1,6})\s*(.+)$/);
+  if (match) {
+    return { level: match[1].length, name: match[2].trim() };
+  }
+
+  return { level: null, name: trimmed };
+}
+
+function findSection(lines, target) {
+  for (let i = 0; i < lines.length; i += 1) {
+    const match = lines[i].match(/^(#{1,6})\s*(.+?)\s*$/);
+    if (!match) {
+      continue;
+    }
+    const level = match[1].length;
+    const name = match[2].trim();
+
+    if (target.level && level !== target.level) {
+      continue;
+    }
+
+    if (name.toLowerCase() === target.name.toLowerCase()) {
+      return { index: i, level };
+    }
+  }
+  return null;
+}
+
+function appendToSection(section, text) {
+  if (typeof text !== 'string' || !text.trim()) {
+    throw new Error('Append text is required');
+  }
+
+  const target = parseSectionTarget(section);
+  const content = loadPreferences();
+  const lines = content.split(/\r?\n/);
+  const match = findSection(lines, target);
+  const trimmedText = text.replace(/\s+$/, '');
+
+  if (!match) {
+    const headingLevel = target.level || 2;
+    const headingLine = `${'#'.repeat(headingLevel)} ${target.name}`;
+    const newLines = [...lines];
+
+    if (newLines.length > 0 && newLines[newLines.length - 1].trim() !== '') {
+      newLines.push('');
+    }
+    newLines.push(headingLine, '');
+    newLines.push(...trimmedText.split(/\r?\n/));
+
+    return savePreferences(newLines.join('\n'));
+  }
+
+  let insertIndex = lines.length;
+  for (let i = match.index + 1; i < lines.length; i += 1) {
+    const headingMatch = lines[i].match(/^(#{1,6})\s*(.+?)\s*$/);
+    if (!headingMatch) {
+      continue;
+    }
+    const level = headingMatch[1].length;
+    if (level <= match.level) {
+      insertIndex = i;
+      break;
+    }
+  }
+
+  const insertLines = trimmedText.split(/\r?\n/);
+  const lineBefore = lines[insertIndex - 1];
+  if (lineBefore !== undefined && lineBefore.trim() !== '') {
+    insertLines.unshift('');
+  }
+
+  const updated = [...lines];
+  updated.splice(insertIndex, 0, ...insertLines);
+
+  return savePreferences(updated.join('\n'));
+}
+
+module.exports = {
+  getPreferencesPath,
+  loadPreferences,
+  savePreferences,
+  appendToSection,
+  resetPreferences,
+  validatePreferences,
+  PREFERENCES_FILE,
+  TEMPLATE_PATH
+};
