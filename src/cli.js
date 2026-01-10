@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * xbrain CLI
+ * synap CLI
  * A CLI for externalizing your working memory
  */
 
@@ -23,7 +23,7 @@ async function main() {
   updateNotifier({ pkg }).notify();
 
   program
-    .name('xbrain')
+    .name('synap')
     .description('A CLI for externalizing your working memory')
     .version(pkg.version);
 
@@ -291,7 +291,7 @@ async function main() {
         if (result.entries.length === 0) {
           console.log(chalk.gray('No entries found.'));
           if (!options.all && !options.archived) {
-            console.log(chalk.gray('Tip: Use --all to see all entries, or xbrain add "your thought" to create one.'));
+            console.log(chalk.gray('Tip: Use --all to see all entries, or synap add "your thought" to create one.'));
           }
           return;
         }
@@ -482,7 +482,7 @@ async function main() {
         const os = require('os');
         const path = require('path');
 
-        const tmpFile = path.join(os.tmpdir(), `xbrain-${entry.id.slice(0, 8)}.txt`);
+        const tmpFile = path.join(os.tmpdir(), `synap-${entry.id.slice(0, 8)}.txt`);
         fs.writeFileSync(tmpFile, entry.content);
 
         const editor = config.editor || process.env.EDITOR || 'vi';
@@ -812,7 +812,7 @@ async function main() {
       if (options.json) {
         console.log(JSON.stringify({ success: true, count: entries.length }));
       } else {
-        console.log(chalk.green(`Deleted ${entries.length} entries (use "xbrain restore --last ${entries.length}" to undo)`));
+        console.log(chalk.green(`Deleted ${entries.length} entries (use "synap restore --last ${entries.length}" to undo)`));
       }
     });
 
@@ -894,7 +894,7 @@ async function main() {
       if (options.json) {
         console.log(JSON.stringify({ success: true, ...stats }, null, 2));
       } else {
-        console.log(chalk.bold('xbrain Statistics\n'));
+        console.log(chalk.bold('synap Statistics\n'));
         console.log(`  Total entries: ${stats.total}`);
         console.log(`  Active:        ${stats.byStatus.active || 0}`);
         console.log(`  Raw (need triage): ${stats.byStatus.raw || 0}`);
@@ -911,7 +911,7 @@ async function main() {
         console.log(`  Updated today:      ${stats.updatedToday}`);
 
         if (stats.byStatus.raw > 0) {
-          console.log(chalk.gray('\nTip: Run "xbrain list --status raw" to triage unprocessed entries'));
+          console.log(chalk.gray('\nTip: Run "synap list --status raw" to triage unprocessed entries'));
         }
       }
     });
@@ -1145,7 +1145,7 @@ async function main() {
           console.log();
 
           if (rawEntries.entries.length > 0) {
-            console.log(chalk.yellow(`${rawEntries.entries.length} entries need triage (xbrain triage)`));
+            console.log(chalk.yellow(`${rawEntries.entries.length} entries need triage (synap triage)`));
           }
 
           if (p1Items.entries.length > 0) {
@@ -1398,7 +1398,7 @@ async function main() {
         if (hasAppend) {
           const values = options.append || [];
           if (values.length < 2) {
-            respondError('Usage: xbrain preferences --append "## Section" "Text to append"');
+            respondError('Usage: synap preferences --append "## Section" "Text to append"');
           }
 
           const [section, ...textParts] = values;
@@ -1468,15 +1468,15 @@ async function main() {
       let skillResult = { prompted: false };
       if (!options.json) {
         console.log('');
-        console.log(chalk.bold('Welcome to xbrain!\n'));
-        console.log('xbrain helps you externalize your working memory.');
+        console.log(chalk.bold('Welcome to synap!\n'));
+        console.log('synap helps you externalize your working memory.');
         console.log('Capture ideas, todos, projects, and questions.\n');
 
         console.log('Let\'s get you set up:\n');
 
         console.log('[1/3] Quick capture test...');
         if (createdEntry) {
-          console.log(`      xbrain add "My first thought"`);
+          console.log(`      synap add "My first thought"`);
           console.log(`      ${chalk.green('✓')} Created entry ${createdEntry.id.slice(0, 8)}`);
         } else {
           console.log(`      ${chalk.gray('Existing entries detected, skipping.')}`);
@@ -1484,7 +1484,7 @@ async function main() {
 
         console.log('\n[2/3] Configuration...');
         console.log(`      Default type: ${chalk.cyan(config.defaultType || 'idea')}`);
-        console.log(`      Change with: ${chalk.cyan('xbrain config defaultType todo')}`);
+        console.log(`      Change with: ${chalk.cyan('synap config defaultType todo')}`);
 
         console.log('\n[3/3] Claude Code Integration');
         const { confirm } = await import('@inquirer/prompts');
@@ -1499,11 +1499,11 @@ async function main() {
           try {
             skillResult = { ...skillResult, ...(await skillInstaller.install()) };
             if (skillResult.installed) {
-              console.log(`      ${chalk.green('✓')} Skill installed at ~/.claude/skills/xbrain-assistant/`);
+              console.log(`      ${chalk.green('✓')} Skill installed at ~/.claude/skills/synap-assistant/`);
             } else if (skillResult.skipped) {
               console.log(`      ${chalk.yellow('•')} Skill already up to date`);
             } else if (skillResult.needsForce) {
-              console.log(`      ${chalk.yellow('•')} Skill modified. Use ${chalk.cyan('xbrain install-skill --force')}`);
+              console.log(`      ${chalk.yellow('•')} Skill modified. Use ${chalk.cyan('synap install-skill --force')}`);
             }
           } catch (err) {
             console.log(`      ${chalk.red('✗')} Skill install failed: ${err.message}`);
@@ -1514,9 +1514,9 @@ async function main() {
         }
 
         console.log('\nYou\'re ready! Try these commands:');
-        console.log(`  ${chalk.cyan('xbrain todo "Something to do"')}`);
-        console.log(`  ${chalk.cyan('xbrain focus')}`);
-        console.log(`  ${chalk.cyan('xbrain review daily')}`);
+        console.log(`  ${chalk.cyan('synap todo "Something to do"')}`);
+        console.log(`  ${chalk.cyan('synap focus')}`);
+        console.log(`  ${chalk.cyan('synap review daily')}`);
         console.log('');
         return;
       }
@@ -1529,7 +1529,7 @@ async function main() {
         skill: {
           prompted: false,
           installed: false,
-          message: 'Run xbrain install-skill to enable Claude Code integration'
+          message: 'Run synap install-skill to enable Claude Code integration'
         }
       }, null, 2));
     });
@@ -1570,7 +1570,7 @@ async function main() {
             const displayValue = Array.isArray(v) ? v.join(', ') || '(none)' : (v === null ? '(null)' : v);
             console.log(`  ${chalk.cyan(k)}: ${displayValue}${defaultNote}`);
           }
-          console.log(chalk.gray('\nUse: xbrain config <key> <value> to set a value'));
+          console.log(chalk.gray('\nUse: synap config <key> <value> to set a value'));
         }
         return;
       }
@@ -1636,9 +1636,9 @@ async function main() {
       if (action === 'rename') {
         if (args.length < 2) {
           if (options.json) {
-            console.log(JSON.stringify({ success: false, error: 'Usage: xbrain tags rename <old> <new>', code: 'INVALID_ARGS' }));
+            console.log(JSON.stringify({ success: false, error: 'Usage: synap tags rename <old> <new>', code: 'INVALID_ARGS' }));
           } else {
-            console.error(chalk.red('Usage: xbrain tags rename <old> <new>'));
+            console.error(chalk.red('Usage: synap tags rename <old> <new>'));
           }
           process.exit(1);
         }
@@ -1715,7 +1715,7 @@ async function main() {
       } else {
         const result = await skillInstaller.install({ force: options.force });
         if (result.installed) {
-          console.log(chalk.green('Skill installed to ~/.claude/skills/xbrain-assistant/'));
+          console.log(chalk.green('Skill installed to ~/.claude/skills/synap-assistant/'));
         } else if (result.skipped) {
           console.log(chalk.yellow('Skill already up to date'));
         } else if (result.needsForce) {

@@ -1,4 +1,4 @@
-# xbrain CLI Specification
+# synap CLI Specification
 
 > A CLI for externalizing your working memory
 
@@ -77,7 +77,7 @@ interface Entry {
 
 ### Location
 
-All data is stored in `~/.config/xbrain/`.
+All data is stored in `~/.config/synap/`.
 
 ### Files
 
@@ -113,23 +113,23 @@ Version field enables future migrations.
 
 | Category | Command | Description |
 |----------|---------|-------------|
-| **Capture** | `xbrain add <text>` | Quick capture (default: raw idea) |
-| | `xbrain todo <text>` | Shorthand for `--type todo` |
-| | `xbrain question <text>` | Shorthand for `--type question` |
-| **Query** | `xbrain list` | List entries (filtered) |
-| | `xbrain show <id>` | Show full entry details |
-| | `xbrain search <query>` | Full-text search |
-| **Modify** | `xbrain edit <id>` | Edit entry content |
-| | `xbrain set <id>` | Update metadata (type, status, priority, tags) |
-| | `xbrain link <id1> <id2>` | Create relationships |
-| **Bulk** | `xbrain done <ids...>` | Mark entries as done |
-| | `xbrain archive <ids...>` | Archive entries |
-| | `xbrain delete <ids...>` | Delete entries (with logging) |
-| | `xbrain restore` | Restore deleted entries |
-| **Maintenance** | `xbrain stats` | Overview statistics |
-| | `xbrain export` | Export entries |
-| | `xbrain import` | Import entries |
-| | `xbrain install-skill` | Install Claude Code skill |
+| **Capture** | `synap add <text>` | Quick capture (default: raw idea) |
+| | `synap todo <text>` | Shorthand for `--type todo` |
+| | `synap question <text>` | Shorthand for `--type question` |
+| **Query** | `synap list` | List entries (filtered) |
+| | `synap show <id>` | Show full entry details |
+| | `synap search <query>` | Full-text search |
+| **Modify** | `synap edit <id>` | Edit entry content |
+| | `synap set <id>` | Update metadata (type, status, priority, tags) |
+| | `synap link <id1> <id2>` | Create relationships |
+| **Bulk** | `synap done <ids...>` | Mark entries as done |
+| | `synap archive <ids...>` | Archive entries |
+| | `synap delete <ids...>` | Delete entries (with logging) |
+| | `synap restore` | Restore deleted entries |
+| **Maintenance** | `synap stats` | Overview statistics |
+| | `synap export` | Export entries |
+| | `synap import` | Import entries |
+| | `synap install-skill` | Install Claude Code skill |
 
 ### Global Flags
 
@@ -143,15 +143,15 @@ Version field enables future migrations.
 
 ### Capture Commands
 
-#### `xbrain add <content>`
+#### `synap add <content>`
 
 Quick capture of a thought.
 
 ```bash
-xbrain add "What if we used SQLite instead of JSON files?"
-xbrain add "Need to review PR #42" --type todo --priority 1
-xbrain add "Meeting with Sarah about Q1 planning" --type note --tags "meetings,Q1"
-xbrain add --type project --title "xbrain CLI" "Build a CLI for capturing thoughts..."
+synap add "What if we used SQLite instead of JSON files?"
+synap add "Need to review PR #42" --type todo --priority 1
+synap add "Meeting with Sarah about Q1 planning" --type note --tags "meetings,Q1"
+synap add --type project --title "synap CLI" "Build a CLI for capturing thoughts..."
 ```
 
 **Options**:
@@ -178,43 +178,43 @@ Added idea a1b2c3d4: "What if we used SQLite instead of JSON files?"
 }
 ```
 
-#### `xbrain todo <content>`
+#### `synap todo <content>`
 
 Shorthand for adding a todo.
 
 ```bash
-xbrain todo "Review PR #42"
-# Equivalent to: xbrain add "Review PR #42" --type todo
+synap todo "Review PR #42"
+# Equivalent to: synap add "Review PR #42" --type todo
 ```
 
-#### `xbrain question <content>`
+#### `synap question <content>`
 
 Shorthand for adding a question.
 
 ```bash
-xbrain question "Should we use SQLite or JSON files?"
-# Equivalent to: xbrain add "Should we use SQLite or JSON files?" --type question
+synap question "Should we use SQLite or JSON files?"
+# Equivalent to: synap add "Should we use SQLite or JSON files?" --type question
 ```
 
 ---
 
 ### Query Commands
 
-#### `xbrain list`
+#### `synap list`
 
 List entries with filtering.
 
 ```bash
-xbrain list                              # Active + raw entries (default)
-xbrain list --all                        # All entries except archived
-xbrain list --type todo                  # Only todos
-xbrain list --status raw                 # Only raw entries (need triage)
-xbrain list --tags work,urgent           # Entries with ALL specified tags
-xbrain list --priority 1                 # High priority only
-xbrain list --parent a1b2c3d4            # Children of specific entry
-xbrain list --since 7d                   # Created in last 7 days
-xbrain list --limit 20                   # Max 20 results
-xbrain list --json                       # JSON output for agents
+synap list                              # Active + raw entries (default)
+synap list --all                        # All entries except archived
+synap list --type todo                  # Only todos
+synap list --status raw                 # Only raw entries (need triage)
+synap list --tags work,urgent           # Entries with ALL specified tags
+synap list --priority 1                 # High priority only
+synap list --parent a1b2c3d4            # Children of specific entry
+synap list --since 7d                   # Created in last 7 days
+synap list --limit 20                   # Max 20 results
+synap list --json                       # JSON output for agents
 ```
 
 **Options**:
@@ -241,12 +241,12 @@ xbrain list --json                       # JSON output for agents
 Entries (12 total, showing active + raw)
 
 IDEAS (3)
-  a1b2c3d4  [P1] xbrain CLI concept                  #tools #productivity
+  a1b2c3d4  [P1] synap CLI concept                  #tools #productivity
   b2c3d4e5       What if we used SQLite?             #technical
 
 TODOS (5)
   c3d4e5f6  [P1] Review PR #42                       #work
-  d4e5f6g7  [P2] Write SPEC.md for xbrain        #work #writing
+  d4e5f6g7  [P2] Write SPEC.md for synap        #work #writing
   ...
 
 QUESTIONS (2)
@@ -267,15 +267,15 @@ Tip: Use --type todo to see only todos
 }
 ```
 
-#### `xbrain show <id>`
+#### `synap show <id>`
 
 Show full entry details.
 
 ```bash
-xbrain show a1b2c3d4
-xbrain show a1b2c3d4 --with-children     # Include child entries
-xbrain show a1b2c3d4 --with-related      # Include related entries
-xbrain show a1b2c3d4 --json
+synap show a1b2c3d4
+synap show a1b2c3d4 --with-children     # Include child entries
+synap show a1b2c3d4 --with-related      # Include related entries
+synap show a1b2c3d4 --json
 ```
 
 **Options**:
@@ -295,7 +295,7 @@ Entry a1b2c3d4-e5f6-7890-abcd-ef1234567890
   Priority: P1 (high)
   Tags:     #tools #productivity #agents
 
-  Title: xbrain CLI concept
+  Title: synap CLI concept
 
   Content:
   Build a CLI tool for capturing thoughts without the overhead of Asana.
@@ -309,14 +309,14 @@ Entry a1b2c3d4-e5f6-7890-abcd-ef1234567890
   Related:  f7e8d9c0 (reference: "Agent-Ready CLI pattern")
 ```
 
-#### `xbrain search <query>`
+#### `synap search <query>`
 
 Full-text search across content and titles.
 
 ```bash
-xbrain search "SQLite"
-xbrain search "agent" --type idea
-xbrain search "meeting" --since 30d --json
+synap search "SQLite"
+synap search "agent" --type idea
+synap search "meeting" --since 30d --json
 ```
 
 **Options**:
@@ -333,15 +333,15 @@ xbrain search "meeting" --since 30d --json
 
 ### Modify Commands
 
-#### `xbrain edit <id>`
+#### `synap edit <id>`
 
 Edit entry content.
 
 ```bash
-xbrain edit a1b2c3d4                          # Opens $EDITOR
-xbrain edit a1b2c3d4 --content "New content"  # Non-interactive
-xbrain edit a1b2c3d4 --title "New title"
-xbrain edit a1b2c3d4 --append "Additional thought"
+synap edit a1b2c3d4                          # Opens $EDITOR
+synap edit a1b2c3d4 --content "New content"  # Non-interactive
+synap edit a1b2c3d4 --title "New title"
+synap edit a1b2c3d4 --append "Additional thought"
 ```
 
 **Options**:
@@ -353,19 +353,19 @@ xbrain edit a1b2c3d4 --append "Additional thought"
 | `--append <text>` | Append to content |
 | `--json` | Output as JSON |
 
-#### `xbrain set <id>`
+#### `synap set <id>`
 
 Update entry metadata.
 
 ```bash
-xbrain set a1b2c3d4 --type project
-xbrain set a1b2c3d4 --status active
-xbrain set a1b2c3d4 --priority 1
-xbrain set a1b2c3d4 --tags "work,urgent,Q1"
-xbrain set a1b2c3d4 --add-tags "important"
-xbrain set a1b2c3d4 --remove-tags "draft"
-xbrain set a1b2c3d4 --clear-priority
-xbrain set a1b2c3d4 --type todo --priority 1 --tags "work"  # Multiple at once
+synap set a1b2c3d4 --type project
+synap set a1b2c3d4 --status active
+synap set a1b2c3d4 --priority 1
+synap set a1b2c3d4 --tags "work,urgent,Q1"
+synap set a1b2c3d4 --add-tags "important"
+synap set a1b2c3d4 --remove-tags "draft"
+synap set a1b2c3d4 --clear-priority
+synap set a1b2c3d4 --type todo --priority 1 --tags "work"  # Multiple at once
 ```
 
 **Options**:
@@ -383,30 +383,30 @@ xbrain set a1b2c3d4 --type todo --priority 1 --tags "work"  # Multiple at once
 | `--clear-parent` | Remove parent |
 | `--json` | Output as JSON |
 
-#### `xbrain link <id1> <id2>`
+#### `synap link <id1> <id2>`
 
 Create relationship between entries.
 
 ```bash
-xbrain link a1b2c3d4 b2c3d4e5                # Add to related
-xbrain link a1b2c3d4 b2c3d4e5 --as-parent    # Set b2c3d4e5 as parent of a1b2c3d4
-xbrain link a1b2c3d4 b2c3d4e5 --as-child     # Set b2c3d4e5 as child of a1b2c3d4
-xbrain link a1b2c3d4 b2c3d4e5 --unlink       # Remove relationship
+synap link a1b2c3d4 b2c3d4e5                # Add to related
+synap link a1b2c3d4 b2c3d4e5 --as-parent    # Set b2c3d4e5 as parent of a1b2c3d4
+synap link a1b2c3d4 b2c3d4e5 --as-child     # Set b2c3d4e5 as child of a1b2c3d4
+synap link a1b2c3d4 b2c3d4e5 --unlink       # Remove relationship
 ```
 
 ---
 
 ### Bulk Commands
 
-#### `xbrain done <ids...>`
+#### `synap done <ids...>`
 
 Mark entries as done.
 
 ```bash
-xbrain done a1b2c3d4
-xbrain done a1b2c3d4 b2c3d4e5 c3d4e5f6       # Multiple
-xbrain done --type todo --tags "sprint-1"     # By filter
-xbrain done --dry-run --type todo             # Preview
+synap done a1b2c3d4
+synap done a1b2c3d4 b2c3d4e5 c3d4e5f6       # Multiple
+synap done --type todo --tags "sprint-1"     # By filter
+synap done --dry-run --type todo             # Preview
 ```
 
 **Options**:
@@ -419,27 +419,27 @@ xbrain done --dry-run --type todo             # Preview
 | `--confirm` | Skip confirmation prompt |
 | `--json` | Output as JSON |
 
-#### `xbrain archive <ids...>`
+#### `synap archive <ids...>`
 
 Archive entries (hides from default view).
 
 ```bash
-xbrain archive a1b2c3d4
-xbrain archive --status done --since 30d      # Archive old completed items
-xbrain archive --dry-run --status done
+synap archive a1b2c3d4
+synap archive --status done --since 30d      # Archive old completed items
+synap archive --dry-run --status done
 ```
 
-Same options as `xbrain done`.
+Same options as `synap done`.
 
-#### `xbrain delete <ids...>`
+#### `synap delete <ids...>`
 
 Delete entries (logged for undo).
 
 ```bash
-xbrain delete a1b2c3d4
-xbrain delete a1b2c3d4 b2c3d4e5 --confirm
-xbrain delete --status archived --since 90d   # Clean up old archives
-xbrain delete --dry-run --type reference --tags "temp"
+synap delete a1b2c3d4
+synap delete a1b2c3d4 b2c3d4e5 --confirm
+synap delete --status archived --since 90d   # Clean up old archives
+synap delete --dry-run --type reference --tags "temp"
 ```
 
 **Options**:
@@ -461,33 +461,33 @@ xbrain delete --dry-run --type reference --tags "temp"
 - Deleting entries with children requires `--force`
 - Shows preview even with `--confirm` for filter-based deletions
 
-#### `xbrain restore`
+#### `synap restore`
 
 Restore deleted entries.
 
 ```bash
-xbrain restore --last 1                       # Restore most recent deletion
-xbrain restore --last 5                       # Restore last 5
-xbrain restore --ids a1b2c3d4,b2c3d4e5        # Restore specific IDs
-xbrain restore --list                         # Show deletion log
+synap restore --last 1                       # Restore most recent deletion
+synap restore --last 5                       # Restore last 5
+synap restore --ids a1b2c3d4,b2c3d4e5        # Restore specific IDs
+synap restore --list                         # Show deletion log
 ```
 
 ---
 
 ### Maintenance Commands
 
-#### `xbrain stats`
+#### `synap stats`
 
 Show entry statistics.
 
 ```bash
-xbrain stats
-xbrain stats --json
+synap stats
+synap stats --json
 ```
 
 **Human output**:
 ```
-xbrain Statistics
+synap Statistics
 
   Total entries: 47
   Active:        23
@@ -507,39 +507,39 @@ xbrain Statistics
   Created this week:  12
   Updated today:       3
 
-Tip: Run "xbrain list --status raw" to triage unprocessed entries
+Tip: Run "synap list --status raw" to triage unprocessed entries
 ```
 
-#### `xbrain export`
+#### `synap export`
 
 Export entries for backup or migration.
 
 ```bash
-xbrain export                                 # Export all to stdout
-xbrain export --file backup.json              # Export to file
-xbrain export --type todo --status active     # Export filtered
-xbrain export --format csv                    # CSV format
+synap export                                 # Export all to stdout
+synap export --file backup.json              # Export to file
+synap export --type todo --status active     # Export filtered
+synap export --format csv                    # CSV format
 ```
 
-#### `xbrain import`
+#### `synap import`
 
 Import entries from file.
 
 ```bash
-xbrain import backup.json
-xbrain import backup.json --dry-run           # Preview what would be imported
-xbrain import backup.json --merge             # Update existing, add new
-xbrain import backup.json --skip-existing     # Only add new entries
+synap import backup.json
+synap import backup.json --dry-run           # Preview what would be imported
+synap import backup.json --merge             # Update existing, add new
+synap import backup.json --skip-existing     # Only add new entries
 ```
 
-#### `xbrain install-skill`
+#### `synap install-skill`
 
 Install Claude Code skill for AI agents.
 
 ```bash
-xbrain install-skill
-xbrain install-skill --uninstall
-xbrain install-skill --force                  # Override ownership check
+synap install-skill
+synap install-skill --uninstall
+synap install-skill --force                  # Override ownership check
 ```
 
 ---
@@ -570,15 +570,15 @@ xbrain install-skill --force                  # Override ownership check
 ### Log Before Delete
 
 All deletions are logged to `deletion-log.json` BEFORE the delete operation. This enables:
-- `xbrain restore --last N` to undo recent deletions
-- `xbrain restore --ids <ids>` to restore specific entries
-- `xbrain restore --list` to see deletion history
+- `synap restore --last N` to undo recent deletions
+- `synap restore --ids <ids>` to restore specific entries
+- `synap restore --list` to see deletion history
 
 ### Two-Step Pattern for Bulk Operations
 
-1. **Preview**: `xbrain delete --status archived --since 90d --dry-run`
+1. **Preview**: `synap delete --status archived --since 90d --dry-run`
 2. **Confirm**: User reviews what will be affected
-3. **Execute**: `xbrain delete --ids "<ids>" --confirm`
+3. **Execute**: `synap delete --ids "<ids>" --confirm`
 
 **Principle**: Filters are for DISCOVERY, IDs are for EXECUTION.
 
@@ -634,7 +634,7 @@ All deletions are logged to `deletion-log.json` BEFORE the delete operation. Thi
 
 | Variable | Description |
 |----------|-------------|
-| `XBRAIN_DIR` | Override config directory (default: `~/.config/xbrain`) |
+| `SYNAP_DIR` | Override config directory (default: `~/.config/synap`) |
 | `EDITOR` | Editor for interactive edit |
 
 ---
@@ -643,9 +643,9 @@ All deletions are logged to `deletion-log.json` BEFORE the delete operation. Thi
 
 | Operation | Target |
 |-----------|--------|
-| `xbrain add` | < 100ms |
-| `xbrain list` | < 200ms (up to 1000 entries) |
-| `xbrain search` | < 500ms (full-text scan) |
+| `synap add` | < 100ms |
+| `synap list` | < 200ms (up to 1000 entries) |
+| `synap search` | < 500ms (full-text scan) |
 
 ---
 

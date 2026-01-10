@@ -9,7 +9,7 @@ import os from 'os';
 import { execSync } from 'child_process';
 
 // Create a unique test directory for each test run
-const TEST_CONFIG_DIR = path.join(os.tmpdir(), `xbrain-test-shorthands-${Date.now()}`);
+const TEST_CONFIG_DIR = path.join(os.tmpdir(), `synap-test-shorthands-${Date.now()}`);
 
 // Path to the CLI
 const CLI_PATH = path.join(process.cwd(), 'src/cli.js');
@@ -32,13 +32,13 @@ describe('type shorthand commands', () => {
 
   const runCli = (args) => {
     const result = execSync(`node ${CLI_PATH} ${args} --json`, {
-      env: { ...process.env, XBRAIN_DIR: TEST_CONFIG_DIR },
+      env: { ...process.env, SYNAP_DIR: TEST_CONFIG_DIR },
       encoding: 'utf8'
     });
     return JSON.parse(result);
   };
 
-  it('xbrain idea creates entry with type idea', () => {
+  it('synap idea creates entry with type idea', () => {
     const result = runCli('idea "Test idea content"');
 
     expect(result.success).toBe(true);
@@ -46,7 +46,7 @@ describe('type shorthand commands', () => {
     expect(result.entry.content).toBe('Test idea content');
   });
 
-  it('xbrain project creates entry with type project', () => {
+  it('synap project creates entry with type project', () => {
     const result = runCli('project "New project"');
 
     expect(result.success).toBe(true);
@@ -54,7 +54,7 @@ describe('type shorthand commands', () => {
     expect(result.entry.content).toBe('New project');
   });
 
-  it('xbrain feature creates entry with type feature', () => {
+  it('synap feature creates entry with type feature', () => {
     const result = runCli('feature "Add dark mode"');
 
     expect(result.success).toBe(true);
@@ -62,7 +62,7 @@ describe('type shorthand commands', () => {
     expect(result.entry.content).toBe('Add dark mode');
   });
 
-  it('xbrain note creates entry with type note', () => {
+  it('synap note creates entry with type note', () => {
     const result = runCli('note "Meeting notes from today"');
 
     expect(result.success).toBe(true);
@@ -70,7 +70,7 @@ describe('type shorthand commands', () => {
     expect(result.entry.content).toBe('Meeting notes from today');
   });
 
-  it('xbrain ref creates entry with type reference', () => {
+  it('synap ref creates entry with type reference', () => {
     const result = runCli('ref "https://example.com/docs"');
 
     expect(result.success).toBe(true);

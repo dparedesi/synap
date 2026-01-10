@@ -7,14 +7,14 @@ import path from 'path';
 import os from 'os';
 import { execSync } from 'child_process';
 
-const TEST_DIR = path.join(os.tmpdir(), `xbrain-test-triage-${Date.now()}`);
+const TEST_DIR = path.join(os.tmpdir(), `synap-test-triage-${Date.now()}`);
 const CLI_PATH = path.join(process.cwd(), 'src/cli.js');
 
 function runCli(args) {
   try {
     const result = execSync(`node ${CLI_PATH} ${args} --json`, {
       encoding: 'utf8',
-      env: { ...process.env, XBRAIN_DIR: TEST_DIR }
+      env: { ...process.env, SYNAP_DIR: TEST_DIR }
     });
     return JSON.parse(result);
   } catch (error) {

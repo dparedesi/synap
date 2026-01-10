@@ -1,4 +1,4 @@
-# xbrain CLI
+# synap CLI
 
 A CLI for externalizing your working memory - capture ideas, projects, features, todos, and questions.
 
@@ -20,7 +20,7 @@ test/
 scripts/
   postinstall.js   # npm postinstall - shows hints
 
-.claude/skills/xbrain-assistant/
+.claude/skills/synap-assistant/
   SKILL.md         # AI agent skill for Claude Code
 ```
 
@@ -33,7 +33,7 @@ This CLI follows the "Agent-Ready CLI" pattern:
 - Safety patterns: log before delete, dry-run, undo capability
 
 ### Storage
-- All data in `~/.config/xbrain/`
+- All data in `~/.config/synap/`
 - `entries.json`: Active entries
 - `archive.json`: Archived entries
 - `deletion-log.json`: Audit log for restore capability
@@ -63,46 +63,46 @@ interface Entry {
 
 | Command | Description |
 |---------|-------------|
-| `xbrain add <text>` | Quick capture |
-| `xbrain todo <text>` | Add todo |
-| `xbrain question <text>` | Add question |
-| `xbrain idea <text>` | Add idea |
-| `xbrain project <text>` | Add project |
-| `xbrain feature <text>` | Add feature |
-| `xbrain note <text>` | Add note |
-| `xbrain ref <text>` | Add reference |
-| `xbrain list` | List entries |
-| `xbrain show <id>` | Show details |
-| `xbrain search <query>` | Full-text search (includes tags) |
-| `xbrain edit <id>` | Edit content |
-| `xbrain set <id>` | Update metadata |
-| `xbrain done <id>` | Mark done |
-| `xbrain archive <id>` | Archive |
-| `xbrain delete <id>` | Delete (logged) |
-| `xbrain restore` | Restore deleted |
-| `xbrain stats` | Statistics |
-| `xbrain tree [id]` | Hierarchical view |
-| `xbrain focus` | P1 todos + active projects |
-| `xbrain review [daily\|weekly]` | Guided review session |
-| `xbrain triage` | Interactive raw entry processing |
-| `xbrain config [key] [value]` | View/update configuration |
-| `xbrain tags` | List all tags with counts |
-| `xbrain tags rename <old> <new>` | Rename tag across entries |
-| `xbrain install-skill` | Install Claude skill |
-| `xbrain preferences` | View or update user preferences |
-| `xbrain setup` | Guided first-run wizard |
-| `xbrain link <id1> <id2>` | Link entries (--as-parent, --as-child, --unlink) |
-| `xbrain export` | Export entries (--file, --format, --type, --status) |
-| `xbrain import <file>` | Import entries (--merge, --skip-existing, --dry-run) |
+| `synap add <text>` | Quick capture |
+| `synap todo <text>` | Add todo |
+| `synap question <text>` | Add question |
+| `synap idea <text>` | Add idea |
+| `synap project <text>` | Add project |
+| `synap feature <text>` | Add feature |
+| `synap note <text>` | Add note |
+| `synap ref <text>` | Add reference |
+| `synap list` | List entries |
+| `synap show <id>` | Show details |
+| `synap search <query>` | Full-text search (includes tags) |
+| `synap edit <id>` | Edit content |
+| `synap set <id>` | Update metadata |
+| `synap done <id>` | Mark done |
+| `synap archive <id>` | Archive |
+| `synap delete <id>` | Delete (logged) |
+| `synap restore` | Restore deleted |
+| `synap stats` | Statistics |
+| `synap tree [id]` | Hierarchical view |
+| `synap focus` | P1 todos + active projects |
+| `synap review [daily\|weekly]` | Guided review session |
+| `synap triage` | Interactive raw entry processing |
+| `synap config [key] [value]` | View/update configuration |
+| `synap tags` | List all tags with counts |
+| `synap tags rename <old> <new>` | Rename tag across entries |
+| `synap install-skill` | Install Claude skill |
+| `synap preferences` | View or update user preferences |
+| `synap setup` | Guided first-run wizard |
+| `synap link <id1> <id2>` | Link entries (--as-parent, --as-child, --unlink) |
+| `synap export` | Export entries (--file, --format, --type, --status) |
+| `synap import <file>` | Import entries (--merge, --skip-existing, --dry-run) |
 
 ### Enhanced Filters (v0.3.0)
 
 ```bash
-xbrain list --any-tags work,personal   # OR logic for tags
-xbrain list --not-type reference       # Exclude type
-xbrain list --not-tags archived        # Exclude entries with tag
-xbrain list --before 7d                # Entries older than 7 days
-xbrain list --between 2025-01-01,2025-01-31  # Date range
+synap list --any-tags work,personal   # OR logic for tags
+synap list --not-type reference       # Exclude type
+synap list --not-tags archived        # Exclude entries with tag
+synap list --before 7d                # Entries older than 7 days
+synap list --between 2025-01-01,2025-01-31  # Date range
 ```
 
 ## Testing

@@ -1,11 +1,11 @@
 ---
-name: xbrain-assistant
-source: xbrain-cli
-description: Manage a personal knowledge capture system. Use when the user wants to capture ideas, track todos, organize projects, review their xbrain, or mentions "xbrain", "brain dump", "capture this", "add to my list", "what's on my plate", "what should I focus on", or "daily review".
-hash: 739fbda925a932c773bcec0322c46792
+name: synap-assistant
+source: synap-cli
+description: Manage a personal knowledge capture system. Use when the user wants to capture ideas, track todos, organize projects, review their synap, or mentions "synap", "brain dump", "capture this", "add to my list", "what's on my plate", "what should I focus on", or "daily review".
+hash: 9c86041f8c7095822804f47de0b68715
 ---
 
-# xbrain Assistant
+# synap Assistant
 
 A CLI for externalizing your working memory - capture ideas, projects, features, todos, and questions without the overhead of complex tools.
 
@@ -13,14 +13,14 @@ A CLI for externalizing your working memory - capture ideas, projects, features,
 
 Your brain is for having ideas, not holding them. But sticky notes get lost, notepads pile up unread, and tools like Asana are overkill for personal capture.
 
-**xbrain** solves this by providing:
+**synap** solves this by providing:
 - **Zero-friction capture** - dump thoughts in seconds
 - **Structured retrieval** - find anything with search and filters
 - **AI-assisted triage** - agents help you organize, prioritize, and act
 
 ## Agent Mindset
 
-When assisting users with their xbrain entries:
+When assisting users with their synap entries:
 
 1. **Capture first, organize later** - Never block on classification during fast capture. Get the thought out, refine later.
 
@@ -36,10 +36,10 @@ When assisting users with their xbrain entries:
 
 ## User Preferences (Memory)
 
-xbrain stores long-term user preferences at `~/.config/xbrain/user-preferences.md`.
+synap stores long-term user preferences at `~/.config/synap/user-preferences.md`.
 
 - Read preferences at the start of a session when present.
-- Append stable, reusable preferences with `xbrain preferences --append "## Section" "..."`.
+- Append stable, reusable preferences with `synap preferences --append "## Section" "..."`.
 - Avoid overwriting user-written content; prefer section-based appends.
 
 ## Operating Modes
@@ -50,7 +50,7 @@ Detect user intent and respond appropriately:
 |------|----------|----------|
 | **Capture** | "Add this...", "Remind me...", "I had an idea..." | Fast capture, minimal questions, default to idea type |
 | **Review** | "What's on my plate?", "Daily review", "Show me..." | Stats + prioritized summary, grouped by type |
-| **Triage** | "Process my xbrain", "Process my brain dump", "What needs attention?" | Surface raw entries, help classify and prioritize |
+| **Triage** | "Process my synap", "Process my brain dump", "What needs attention?" | Surface raw entries, help classify and prioritize |
 | **Focus** | "What should I work on?", "Priority items" | P1 todos + active projects, clear next actions |
 | **Cleanup** | "Archive completed", "Clean up old stuff" | Bulk operations with preview and confirmation |
 
@@ -65,41 +65,41 @@ Detect user intent and respond appropriately:
 
 | Task | Command |
 |------|---------|
-| Capture idea | `xbrain add "your thought here"` |
-| Add todo | `xbrain todo "task description"` |
-| Add question | `xbrain question "what you're wondering"` |
-| List active | `xbrain list` |
-| See all | `xbrain list --all` |
-| Search | `xbrain search "keyword"` |
-| Show details | `xbrain show <id>` |
-| Mark done | `xbrain done <id>` |
-| Get stats | `xbrain stats` |
-| Setup wizard | `xbrain setup` |
-| Edit preferences | `xbrain preferences --edit` |
+| Capture idea | `synap add "your thought here"` |
+| Add todo | `synap todo "task description"` |
+| Add question | `synap question "what you're wondering"` |
+| List active | `synap list` |
+| See all | `synap list --all` |
+| Search | `synap search "keyword"` |
+| Show details | `synap show <id>` |
+| Mark done | `synap done <id>` |
+| Get stats | `synap stats` |
+| Setup wizard | `synap setup` |
+| Edit preferences | `synap preferences --edit` |
 
 ## Pre-flight Check
 
 Before operations, verify the tool is ready:
 
 ```bash
-xbrain --version   # Verify installed
-xbrain stats       # Quick health check
+synap --version   # Verify installed
+synap stats       # Quick health check
 ```
 
-If `xbrain: command not found`, the user needs to install: `npm install -g xbrain`
+If `synap: command not found`, the user needs to install: `npm install -g synap`
 
 ## Command Reference
 
 ### Capture Commands
 
-#### `xbrain add <content>`
+#### `synap add <content>`
 Quick capture of a thought.
 
 ```bash
-xbrain add "What if we used a graph database?"
-xbrain add "Need to review the API design" --type todo --priority 1
-xbrain add "Meeting notes from standup" --type note --tags "meetings,weekly"
-xbrain add --type project --title "Website Redesign" "Complete overhaul of the marketing site..."
+synap add "What if we used a graph database?"
+synap add "Need to review the API design" --type todo --priority 1
+synap add "Meeting notes from standup" --type note --tags "meetings,weekly"
+synap add --type project --title "Website Redesign" "Complete overhaul of the marketing site..."
 ```
 
 **Options**:
@@ -110,36 +110,36 @@ xbrain add --type project --title "Website Redesign" "Complete overhaul of the m
 - `--parent <id>`: Parent entry ID
 - `--json`: JSON output
 
-#### `xbrain todo <content>`
+#### `synap todo <content>`
 Shorthand for adding a todo.
 
 ```bash
-xbrain todo "Review PR #42"
-# Equivalent to: xbrain add "Review PR #42" --type todo
+synap todo "Review PR #42"
+# Equivalent to: synap add "Review PR #42" --type todo
 ```
 
-#### `xbrain question <content>`
+#### `synap question <content>`
 Shorthand for adding a question.
 
 ```bash
-xbrain question "Should we migrate to TypeScript?"
-# Equivalent to: xbrain add "..." --type question
+synap question "Should we migrate to TypeScript?"
+# Equivalent to: synap add "..." --type question
 ```
 
 ### Query Commands
 
-#### `xbrain list`
+#### `synap list`
 List entries with filtering.
 
 ```bash
-xbrain list                              # Active + raw (default)
-xbrain list --all                        # All except archived
-xbrain list --type todo                  # Only todos
-xbrain list --status raw                 # Needs triage
-xbrain list --priority 1                 # High priority only
-xbrain list --tags work,urgent           # Has ALL specified tags
-xbrain list --since 7d                   # Created in last 7 days
-xbrain list --json                       # JSON output for parsing
+synap list                              # Active + raw (default)
+synap list --all                        # All except archived
+synap list --type todo                  # Only todos
+synap list --status raw                 # Needs triage
+synap list --priority 1                 # High priority only
+synap list --tags work,urgent           # Has ALL specified tags
+synap list --since 7d                   # Created in last 7 days
+synap list --json                       # JSON output for parsing
 ```
 
 **Options**:
@@ -158,89 +158,89 @@ xbrain list --json                       # JSON output for parsing
 - `--reverse`: Reverse sort order
 - `--json`: JSON output
 
-#### `xbrain show <id>`
+#### `synap show <id>`
 Show full entry details.
 
 ```bash
-xbrain show a1b2c3d4
-xbrain show a1b2c3d4 --with-children
-xbrain show a1b2c3d4 --with-related
-xbrain show a1b2c3d4 --json
+synap show a1b2c3d4
+synap show a1b2c3d4 --with-children
+synap show a1b2c3d4 --with-related
+synap show a1b2c3d4 --json
 ```
 
-#### `xbrain search <query>`
+#### `synap search <query>`
 Full-text search across content and titles.
 
 ```bash
-xbrain search "database"
-xbrain search "meeting" --type note --since 30d
-xbrain search "API" --json
+synap search "database"
+synap search "meeting" --type note --since 30d
+synap search "API" --json
 ```
 
 ### Modify Commands
 
-#### `xbrain edit <id>`
+#### `synap edit <id>`
 Edit entry content.
 
 ```bash
-xbrain edit a1b2c3d4                          # Opens $EDITOR
-xbrain edit a1b2c3d4 --content "New text"     # Non-interactive
-xbrain edit a1b2c3d4 --append "Follow-up"     # Add to existing
-xbrain edit a1b2c3d4 --title "New title"
+synap edit a1b2c3d4                          # Opens $EDITOR
+synap edit a1b2c3d4 --content "New text"     # Non-interactive
+synap edit a1b2c3d4 --append "Follow-up"     # Add to existing
+synap edit a1b2c3d4 --title "New title"
 ```
 
-#### `xbrain set <id>`
+#### `synap set <id>`
 Update entry metadata.
 
 ```bash
-xbrain set a1b2c3d4 --type project
-xbrain set a1b2c3d4 --status active
-xbrain set a1b2c3d4 --priority 1
-xbrain set a1b2c3d4 --tags "work,Q1"
-xbrain set a1b2c3d4 --add-tags "important"
-xbrain set a1b2c3d4 --remove-tags "draft"
-xbrain set a1b2c3d4 --clear-priority
-xbrain set a1b2c3d4 --parent b2c3d4e5
+synap set a1b2c3d4 --type project
+synap set a1b2c3d4 --status active
+synap set a1b2c3d4 --priority 1
+synap set a1b2c3d4 --tags "work,Q1"
+synap set a1b2c3d4 --add-tags "important"
+synap set a1b2c3d4 --remove-tags "draft"
+synap set a1b2c3d4 --clear-priority
+synap set a1b2c3d4 --parent b2c3d4e5
 ```
 
-#### `xbrain link <id1> <id2>`
+#### `synap link <id1> <id2>`
 Create relationships between entries.
 
 ```bash
-xbrain link a1b2c3d4 b2c3d4e5                # Add to related
-xbrain link a1b2c3d4 b2c3d4e5 --as-parent    # Set hierarchy
-xbrain link a1b2c3d4 b2c3d4e5 --unlink       # Remove relationship
+synap link a1b2c3d4 b2c3d4e5                # Add to related
+synap link a1b2c3d4 b2c3d4e5 --as-parent    # Set hierarchy
+synap link a1b2c3d4 b2c3d4e5 --unlink       # Remove relationship
 ```
 
 ### Bulk Commands
 
-#### `xbrain done <ids...>`
+#### `synap done <ids...>`
 Mark entries as done.
 
 ```bash
-xbrain done a1b2c3d4
-xbrain done a1b2c3d4 b2c3d4e5 c3d4e5f6       # Multiple
-xbrain done --type todo --tags "sprint-1"     # By filter
-xbrain done --dry-run --type todo             # Preview first
+synap done a1b2c3d4
+synap done a1b2c3d4 b2c3d4e5 c3d4e5f6       # Multiple
+synap done --type todo --tags "sprint-1"     # By filter
+synap done --dry-run --type todo             # Preview first
 ```
 
-#### `xbrain archive <ids...>`
+#### `synap archive <ids...>`
 Archive entries (hides from default view).
 
 ```bash
-xbrain archive a1b2c3d4
-xbrain archive --status done --since 30d      # Old completed items
-xbrain archive --dry-run --status done        # Preview
+synap archive a1b2c3d4
+synap archive --status done --since 30d      # Old completed items
+synap archive --dry-run --status done        # Preview
 ```
 
-#### `xbrain delete <ids...>`
+#### `synap delete <ids...>`
 Delete entries (logged for undo).
 
 ```bash
-xbrain delete a1b2c3d4
-xbrain delete a1b2c3d4 b2c3d4e5 --confirm
-xbrain delete --status archived --since 90d   # Permanent cleanup
-xbrain delete --dry-run --type reference      # Preview
+synap delete a1b2c3d4
+synap delete a1b2c3d4 b2c3d4e5 --confirm
+synap delete --status archived --since 90d   # Permanent cleanup
+synap delete --dry-run --type reference      # Preview
 ```
 
 **Safety**:
@@ -248,43 +248,43 @@ xbrain delete --dry-run --type reference      # Preview
 - >10 entries requires `--confirm` or `--force`
 - Entries with children require `--force`
 
-#### `xbrain restore`
+#### `synap restore`
 Restore deleted entries.
 
 ```bash
-xbrain restore --last 1                       # Most recent
-xbrain restore --last 5                       # Last 5
-xbrain restore --ids a1b2c3d4,b2c3d4e5        # Specific IDs
-xbrain restore --list                         # Show deletion log
+synap restore --last 1                       # Most recent
+synap restore --last 5                       # Last 5
+synap restore --ids a1b2c3d4,b2c3d4e5        # Specific IDs
+synap restore --list                         # Show deletion log
 ```
 
 ### Maintenance Commands
 
-#### `xbrain stats`
+#### `synap stats`
 Overview statistics.
 
 ```bash
-xbrain stats
-xbrain stats --json
+synap stats
+synap stats --json
 ```
 
-#### `xbrain export`
+#### `synap export`
 Export entries.
 
 ```bash
-xbrain export                                 # All to stdout
-xbrain export --file backup.json              # To file
-xbrain export --type todo --status active     # Filtered
+synap export                                 # All to stdout
+synap export --file backup.json              # To file
+synap export --type todo --status active     # Filtered
 ```
 
-#### `xbrain import <file>`
+#### `synap import <file>`
 Import entries.
 
 ```bash
-xbrain import backup.json
-xbrain import backup.json --dry-run
-xbrain import backup.json --merge             # Update existing + add new
-xbrain import backup.json --skip-existing     # Only add new
+synap import backup.json
+synap import backup.json --dry-run
+synap import backup.json --merge             # Update existing + add new
+synap import backup.json --skip-existing     # Only add new
 ```
 
 ## Workflow Patterns
@@ -293,39 +293,39 @@ xbrain import backup.json --skip-existing     # Only add new
 
 Run this each morning to get oriented:
 
-1. **Health check**: `xbrain stats`
-2. **Triage raw entries**: `xbrain list --status raw`
-3. **Focus list**: `xbrain list --priority 1 --type todo`
+1. **Health check**: `synap stats`
+2. **Triage raw entries**: `synap list --status raw`
+3. **Focus list**: `synap list --priority 1 --type todo`
 4. **Help user decide** what to work on first
 
 ### Weekly Review
 
 Run this weekly to maintain hygiene:
 
-1. **Celebrate**: `xbrain list --done --since 7d` - show what was accomplished
-2. **Check stalled**: `xbrain list --status active --sort updated` - find items not touched
-3. **Review projects**: `xbrain list --type project` - are they progressing?
-4. **Clean up**: `xbrain archive --status done --since 7d` - archive completed items
+1. **Celebrate**: `synap list --done --since 7d` - show what was accomplished
+2. **Check stalled**: `synap list --status active --sort updated` - find items not touched
+3. **Review projects**: `synap list --type project` - are they progressing?
+4. **Clean up**: `synap archive --status done --since 7d` - archive completed items
 
 ### Triage Workflow
 
 When user has many raw entries:
 
-1. **Fetch**: `xbrain list --status raw --json`
+1. **Fetch**: `synap list --status raw --json`
 2. **For each entry**, determine:
    - Type (idea, todo, project, question, reference, note)
    - Priority (1, 2, 3, or none)
    - Tags (infer from content)
    - Parent (if belongs to existing project/feature)
-3. **Update**: `xbrain set <id> --type todo --priority 1 --tags "work"`
+3. **Update**: `synap set <id> --type todo --priority 1 --tags "work"`
 4. **If entry is actually multiple items**, split and re-capture
-5. **Mark refined**: `xbrain set <id> --status active`
+5. **Mark refined**: `synap set <id> --status active`
 
 ### Capture Mode
 
 When user is dumping thoughts rapidly:
 
-1. Just capture with `xbrain add "..."` - don't interrupt for classification
+1. Just capture with `synap add "..."` - don't interrupt for classification
 2. Use default type (idea) and status (raw)
 3. After the capture session, offer to triage
 
@@ -358,14 +358,14 @@ When user is dumping thoughts rapidly:
 
 1. **Never auto-delete** - Always show what will be deleted and confirm
 2. **Preserve context** - Don't summarize away important details during capture
-3. **Log before delete** - All deletions are recoverable via `xbrain restore`
+3. **Log before delete** - All deletions are recoverable via `synap restore`
 4. **Confirm bulk operations** - Operations affecting >10 entries require confirmation
 5. **Don't over-organize** - Simple thoughts don't need tags, priorities, and parents
 
 ## Proactive Recommendation Patterns
 
-- If raw entries are piling up, suggest `xbrain triage`.
-- If P1 todos exist, suggest `xbrain focus`.
+- If raw entries are piling up, suggest `synap triage`.
+- If P1 todos exist, suggest `synap focus`.
 - If many stale active items exist, suggest a weekly review.
 - If preferences specify cadence, follow it by default.
 
@@ -379,9 +379,9 @@ When user is dumping thoughts rapidly:
 
 Critical for preventing accidental mass changes:
 
-1. **Preview**: `xbrain delete --status archived --since 90d --dry-run`
+1. **Preview**: `synap delete --status archived --since 90d --dry-run`
 2. **Confirm**: Show user what will be affected, get explicit approval
-3. **Execute**: `xbrain delete --ids "<specific-ids>" --confirm`
+3. **Execute**: `synap delete --ids "<specific-ids>" --confirm`
 
 **Principle**: Filters are for DISCOVERY, IDs are for EXECUTION.
 
@@ -389,33 +389,33 @@ Critical for preventing accidental mass changes:
 
 | User Says | Interpretation | Action |
 |-----------|----------------|--------|
-| "Add this to my xbrain" | Fast capture | `xbrain add "<content>"` |
-| "I need to remember to..." | Todo item | `xbrain todo "<content>"` |
-| "What's on my plate?" | Need overview | `xbrain stats` + `xbrain list --priority 1` |
-| "What should I focus on?" | Need priorities | `xbrain list --priority 1 --type todo` |
-| "Process my xbrain" | Triage needed | Run triage workflow on raw entries |
-| "This is done" / "I finished X" | Mark complete | `xbrain done <id>` |
-| "Archive old stuff" | Cleanup | `xbrain archive --status done --since 30d` |
-| "What did I do this week?" | Review completions | `xbrain list --done --since 7d` |
-| "Find anything about X" | Search | `xbrain search "X"` |
-| "Link these together" | Create relationship | `xbrain link <id1> <id2>` |
+| "Add this to my synap" | Fast capture | `synap add "<content>"` |
+| "I need to remember to..." | Todo item | `synap todo "<content>"` |
+| "What's on my plate?" | Need overview | `synap stats` + `synap list --priority 1` |
+| "What should I focus on?" | Need priorities | `synap list --priority 1 --type todo` |
+| "Process my synap" | Triage needed | Run triage workflow on raw entries |
+| "This is done" / "I finished X" | Mark complete | `synap done <id>` |
+| "Archive old stuff" | Cleanup | `synap archive --status done --since 30d` |
+| "What did I do this week?" | Review completions | `synap list --done --since 7d` |
+| "Find anything about X" | Search | `synap search "X"` |
+| "Link these together" | Create relationship | `synap link <id1> <id2>` |
 
 ## Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
-| `xbrain: command not found` | Run `npm install -g xbrain` |
-| Empty xbrain | Start with `xbrain add "My first thought"` |
+| `synap: command not found` | Run `npm install -g synap` |
+| Empty synap | Start with `synap add "My first thought"` |
 | Too many raw entries | Run triage workflow |
-| Can't find entry | Use `xbrain search "<keyword>"` |
-| Accidentally deleted | Use `xbrain restore --last 1` |
-| Wrong type/status | Use `xbrain set <id> --type <type> --status <status>` |
+| Can't find entry | Use `synap search "<keyword>"` |
+| Accidentally deleted | Use `synap restore --last 1` |
+| Wrong type/status | Use `synap set <id> --type <type> --status <status>` |
 
 ## Testing / Evaluation Scenarios
 
 | Scenario | Expected Behavior | Failure Indicator |
 |----------|-------------------|-------------------|
-| User says "capture this" | Immediate `xbrain add`, no questions | Asking for type/priority during fast capture |
+| User says "capture this" | Immediate `synap add`, no questions | Asking for type/priority during fast capture |
 | User says "what's on my plate" | Stats + prioritized summary | Listing all 50 entries individually |
 | User says "clean up" | Preview + confirmation | Auto-archiving without preview |
 | Large deletion (>10 items) | Show count, ask confirmation | Proceeding without confirmation |

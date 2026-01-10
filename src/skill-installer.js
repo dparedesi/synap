@@ -7,8 +7,8 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 
-const SKILL_NAME = 'xbrain-assistant';
-const SKILL_SOURCE = 'xbrain-cli';
+const SKILL_NAME = 'synap-assistant';
+const SKILL_SOURCE = 'synap-cli';
 const SOURCE_SKILL_DIR = path.join(__dirname, '..', '.claude', 'skills', SKILL_NAME);
 const TARGET_SKILL_DIR = path.join(os.homedir(), '.claude', 'skills', SKILL_NAME);
 const SOURCE_SKILL_FILE = path.join(SOURCE_SKILL_DIR, 'SKILL.md');
