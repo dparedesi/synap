@@ -1,5 +1,5 @@
 /**
- * Tests for brain config command
+ * Tests for xbrain config command
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -9,12 +9,12 @@ import os from 'os';
 import { execSync } from 'child_process';
 
 // Create a unique test directory for each test run
-const TEST_CONFIG_DIR = path.join(os.tmpdir(), `brain-dump-test-config-cmd-${Date.now()}`);
+const TEST_CONFIG_DIR = path.join(os.tmpdir(), `xbrain-test-config-cmd-${Date.now()}`);
 
 // Path to the CLI
 const CLI_PATH = path.join(process.cwd(), 'src/cli.js');
 
-describe('brain config command', () => {
+describe('xbrain config command', () => {
   beforeEach(() => {
     // Ensure clean test directory
     if (fs.existsSync(TEST_CONFIG_DIR)) {
@@ -33,7 +33,7 @@ describe('brain config command', () => {
   const runCli = (args, expectError = false) => {
     try {
       const result = execSync(`node ${CLI_PATH} ${args}`, {
-        env: { ...process.env, BRAIN_DUMP_DIR: TEST_CONFIG_DIR },
+        env: { ...process.env, XBRAIN_DIR: TEST_CONFIG_DIR },
         encoding: 'utf8'
       });
       return { success: true, output: result };

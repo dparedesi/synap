@@ -8,10 +8,10 @@ import path from 'path';
 import os from 'os';
 
 // Create a unique test directory for each test run
-const TEST_CONFIG_DIR = path.join(os.tmpdir(), `brain-dump-test-${Date.now()}`);
+const TEST_CONFIG_DIR = path.join(os.tmpdir(), `xbrain-test-${Date.now()}`);
 
 // Set the environment variable before requiring storage
-process.env.BRAIN_DUMP_DIR = TEST_CONFIG_DIR;
+process.env.XBRAIN_DIR = TEST_CONFIG_DIR;
 
 // Dynamic import to ensure env var is set first
 let storage;
@@ -20,7 +20,7 @@ describe('loadConfig', () => {
   beforeEach(async () => {
     // Fresh import for each test
     vi.resetModules();
-    process.env.BRAIN_DUMP_DIR = TEST_CONFIG_DIR;
+    process.env.XBRAIN_DIR = TEST_CONFIG_DIR;
     storage = await import('../src/storage.js');
 
     // Ensure clean test directory

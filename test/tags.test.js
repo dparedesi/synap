@@ -1,5 +1,5 @@
 /**
- * Tests for brain tags command
+ * Tests for xbrain tags command
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -8,18 +8,18 @@ import path from 'path';
 import os from 'os';
 
 // Create a unique test directory for each test run
-const TEST_CONFIG_DIR = path.join(os.tmpdir(), `brain-dump-test-tags-${Date.now()}`);
+const TEST_CONFIG_DIR = path.join(os.tmpdir(), `xbrain-test-tags-${Date.now()}`);
 
 // Set the environment variable before requiring storage
-process.env.BRAIN_DUMP_DIR = TEST_CONFIG_DIR;
+process.env.XBRAIN_DIR = TEST_CONFIG_DIR;
 
 let storage;
 
-describe('brain tags', () => {
+describe('xbrain tags', () => {
   beforeEach(async () => {
     // Fresh import for each test
     vi.resetModules();
-    process.env.BRAIN_DUMP_DIR = TEST_CONFIG_DIR;
+    process.env.XBRAIN_DIR = TEST_CONFIG_DIR;
     storage = await import('../src/storage.js');
 
     // Ensure clean test directory

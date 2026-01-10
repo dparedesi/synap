@@ -8,7 +8,7 @@ const os = require('os');
 const { v4: uuidv4 } = require('uuid');
 
 // Storage directory
-const CONFIG_DIR = process.env.BRAIN_DUMP_DIR || path.join(os.homedir(), '.config', 'brain-dump');
+const CONFIG_DIR = process.env.XBRAIN_DIR || path.join(os.homedir(), '.config', 'xbrain');
 const ENTRIES_FILE = path.join(CONFIG_DIR, 'entries.json');
 const ARCHIVE_FILE = path.join(CONFIG_DIR, 'archive.json');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');

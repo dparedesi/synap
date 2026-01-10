@@ -1,4 +1,4 @@
-# brain-dump CLI
+# xbrain CLI
 
 A CLI for externalizing your working memory - capture ideas, projects, features, todos, and questions.
 
@@ -20,7 +20,7 @@ test/
 scripts/
   postinstall.js   # npm postinstall - shows hints
 
-.claude/skills/brain-dump-assistant/
+.claude/skills/xbrain-assistant/
   SKILL.md         # AI agent skill for Claude Code
 ```
 
@@ -33,7 +33,7 @@ This CLI follows the "Agent-Ready CLI" pattern:
 - Safety patterns: log before delete, dry-run, undo capability
 
 ### Storage
-- All data in `~/.config/brain-dump/`
+- All data in `~/.config/xbrain/`
 - `entries.json`: Active entries
 - `archive.json`: Archived entries
 - `deletion-log.json`: Audit log for restore capability
@@ -63,46 +63,46 @@ interface Entry {
 
 | Command | Description |
 |---------|-------------|
-| `brain add <text>` | Quick capture |
-| `brain todo <text>` | Add todo |
-| `brain question <text>` | Add question |
-| `brain idea <text>` | Add idea |
-| `brain project <text>` | Add project |
-| `brain feature <text>` | Add feature |
-| `brain note <text>` | Add note |
-| `brain ref <text>` | Add reference |
-| `brain list` | List entries |
-| `brain show <id>` | Show details |
-| `brain search <query>` | Full-text search (includes tags) |
-| `brain edit <id>` | Edit content |
-| `brain set <id>` | Update metadata |
-| `brain done <id>` | Mark done |
-| `brain archive <id>` | Archive |
-| `brain delete <id>` | Delete (logged) |
-| `brain restore` | Restore deleted |
-| `brain stats` | Statistics |
-| `brain tree [id]` | Hierarchical view |
-| `brain focus` | P1 todos + active projects |
-| `brain review [daily\|weekly]` | Guided review session |
-| `brain triage` | Interactive raw entry processing |
-| `brain config [key] [value]` | View/update configuration |
-| `brain tags` | List all tags with counts |
-| `brain tags rename <old> <new>` | Rename tag across entries |
-| `brain install-skill` | Install Claude skill |
-| `brain preferences` | View or update user preferences |
-| `brain setup` | Guided first-run wizard |
-| `brain link <id1> <id2>` | Link entries (--as-parent, --as-child, --unlink) |
-| `brain export` | Export entries (--file, --format, --type, --status) |
-| `brain import <file>` | Import entries (--merge, --skip-existing, --dry-run) |
+| `xbrain add <text>` | Quick capture |
+| `xbrain todo <text>` | Add todo |
+| `xbrain question <text>` | Add question |
+| `xbrain idea <text>` | Add idea |
+| `xbrain project <text>` | Add project |
+| `xbrain feature <text>` | Add feature |
+| `xbrain note <text>` | Add note |
+| `xbrain ref <text>` | Add reference |
+| `xbrain list` | List entries |
+| `xbrain show <id>` | Show details |
+| `xbrain search <query>` | Full-text search (includes tags) |
+| `xbrain edit <id>` | Edit content |
+| `xbrain set <id>` | Update metadata |
+| `xbrain done <id>` | Mark done |
+| `xbrain archive <id>` | Archive |
+| `xbrain delete <id>` | Delete (logged) |
+| `xbrain restore` | Restore deleted |
+| `xbrain stats` | Statistics |
+| `xbrain tree [id]` | Hierarchical view |
+| `xbrain focus` | P1 todos + active projects |
+| `xbrain review [daily\|weekly]` | Guided review session |
+| `xbrain triage` | Interactive raw entry processing |
+| `xbrain config [key] [value]` | View/update configuration |
+| `xbrain tags` | List all tags with counts |
+| `xbrain tags rename <old> <new>` | Rename tag across entries |
+| `xbrain install-skill` | Install Claude skill |
+| `xbrain preferences` | View or update user preferences |
+| `xbrain setup` | Guided first-run wizard |
+| `xbrain link <id1> <id2>` | Link entries (--as-parent, --as-child, --unlink) |
+| `xbrain export` | Export entries (--file, --format, --type, --status) |
+| `xbrain import <file>` | Import entries (--merge, --skip-existing, --dry-run) |
 
 ### Enhanced Filters (v0.3.0)
 
 ```bash
-brain list --any-tags work,personal   # OR logic for tags
-brain list --not-type reference       # Exclude type
-brain list --not-tags archived        # Exclude entries with tag
-brain list --before 7d                # Entries older than 7 days
-brain list --between 2025-01-01,2025-01-31  # Date range
+xbrain list --any-tags work,personal   # OR logic for tags
+xbrain list --not-type reference       # Exclude type
+xbrain list --not-tags archived        # Exclude entries with tag
+xbrain list --before 7d                # Entries older than 7 days
+xbrain list --between 2025-01-01,2025-01-31  # Date range
 ```
 
 ## Testing

@@ -1,8 +1,8 @@
-# brain-dump
+# xbrain
 
 A CLI for externalizing your working memory - capture ideas, projects, features, todos, and questions.
 
-[![npm version](https://img.shields.io/npm/v/brain-dump.svg)](https://www.npmjs.com/package/brain-dump)
+[![npm version](https://img.shields.io/npm/v/xbrain.svg)](https://www.npmjs.com/package/xbrain)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
 
@@ -21,120 +21,120 @@ A CLI for externalizing your working memory - capture ideas, projects, features,
 ## Installation
 
 ```bash
-npm install -g brain-dump
+npm install -g xbrain
 ```
 
 ## Quick Start
 
 ```bash
 # Capture thoughts quickly
-brain add "Research state management options for the new app"
-brain todo "Review PR #42 before standup"
-brain idea "What if we added dark mode?"
-brain question "How does the auth flow work?"
+xbrain add "Research state management options for the new app"
+xbrain todo "Review PR #42 before standup"
+xbrain idea "What if we added dark mode?"
+xbrain question "How does the auth flow work?"
 
 # See what needs attention
-brain focus              # P1 todos + active projects
-brain list --status raw  # Unprocessed entries
+xbrain focus              # P1 todos + active projects
+xbrain list --status raw  # Unprocessed entries
 
 # Organize and complete
-brain set abc123 --status active --priority 1
-brain done abc123
+xbrain set abc123 --status active --priority 1
+xbrain done abc123
 
 # Search and explore
-brain search "auth"
-brain tree               # Hierarchical view
+xbrain search "auth"
+xbrain tree               # Hierarchical view
 
 # First-run setup
-brain setup
+xbrain setup
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `brain add <text>` | Quick capture (defaults to idea) |
-| `brain todo <text>` | Add a todo |
-| `brain question <text>` | Add a question |
-| `brain idea <text>` | Add an idea |
-| `brain project <text>` | Add a project |
-| `brain feature <text>` | Add a feature |
-| `brain note <text>` | Add a note |
-| `brain ref <text>` | Add a reference |
-| `brain list` | List entries (with filters) |
-| `brain show <id>` | Show entry details |
-| `brain search <query>` | Full-text search |
-| `brain edit <id>` | Edit entry content |
-| `brain set <id>` | Update entry metadata |
-| `brain link <id1> <id2>` | Link entries together |
-| `brain done <id>` | Mark entry as done |
-| `brain archive <id>` | Archive entry |
-| `brain delete <id>` | Delete entry (logged) |
-| `brain restore` | Restore deleted entries |
-| `brain export` | Export entries to file |
-| `brain import <file>` | Import entries from file |
-| `brain stats` | Show statistics |
-| `brain tree [id]` | Hierarchical view |
-| `brain focus` | P1 todos + active projects |
-| `brain review [daily\|weekly]` | Guided review session |
-| `brain triage` | Interactive raw entry processing |
-| `brain config [key] [value]` | View/update configuration |
-| `brain tags` | List all tags with counts |
-| `brain tags rename <old> <new>` | Rename tag across entries |
-| `brain install-skill` | Install Claude Code skill |
-| `brain preferences` | View or update user preferences |
-| `brain setup` | Guided first-run wizard |
+| `xbrain add <text>` | Quick capture (defaults to idea) |
+| `xbrain todo <text>` | Add a todo |
+| `xbrain question <text>` | Add a question |
+| `xbrain idea <text>` | Add an idea |
+| `xbrain project <text>` | Add a project |
+| `xbrain feature <text>` | Add a feature |
+| `xbrain note <text>` | Add a note |
+| `xbrain ref <text>` | Add a reference |
+| `xbrain list` | List entries (with filters) |
+| `xbrain show <id>` | Show entry details |
+| `xbrain search <query>` | Full-text search |
+| `xbrain edit <id>` | Edit entry content |
+| `xbrain set <id>` | Update entry metadata |
+| `xbrain link <id1> <id2>` | Link entries together |
+| `xbrain done <id>` | Mark entry as done |
+| `xbrain archive <id>` | Archive entry |
+| `xbrain delete <id>` | Delete entry (logged) |
+| `xbrain restore` | Restore deleted entries |
+| `xbrain export` | Export entries to file |
+| `xbrain import <file>` | Import entries from file |
+| `xbrain stats` | Show statistics |
+| `xbrain tree [id]` | Hierarchical view |
+| `xbrain focus` | P1 todos + active projects |
+| `xbrain review [daily\|weekly]` | Guided review session |
+| `xbrain triage` | Interactive raw entry processing |
+| `xbrain config [key] [value]` | View/update configuration |
+| `xbrain tags` | List all tags with counts |
+| `xbrain tags rename <old> <new>` | Rename tag across entries |
+| `xbrain install-skill` | Install Claude Code skill |
+| `xbrain preferences` | View or update user preferences |
+| `xbrain setup` | Guided first-run wizard |
 
-Run `brain <command> --help` for detailed options.
+Run `xbrain <command> --help` for detailed options.
 
 ### Filtering Examples
 
 ```bash
 # By type and status
-brain list --type todo --status active
-brain list --not-type reference
+xbrain list --type todo --status active
+xbrain list --not-type reference
 
 # By tags
-brain list --tags work,urgent
-brain list --any-tags work,personal  # OR logic
-brain list --not-tags archived
+xbrain list --tags work,urgent
+xbrain list --any-tags work,personal  # OR logic
+xbrain list --not-tags archived
 
 # By date
-brain list --since 7d               # Last 7 days
-brain list --before 30d             # Older than 30 days
-brain list --between 2025-01-01,2025-01-31
+xbrain list --since 7d               # Last 7 days
+xbrain list --before 30d             # Older than 30 days
+xbrain list --between 2025-01-01,2025-01-31
 ```
 
 ## Configuration
 
-Configuration is stored at `~/.config/brain-dump/config.json`.
+Configuration is stored at `~/.config/xbrain/config.json`.
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `defaultType` | `idea` | Default type for `brain add` |
+| `defaultType` | `idea` | Default type for `xbrain add` |
 | `defaultTags` | `[]` | Tags automatically added to new entries |
-| `editor` | `$EDITOR` | Editor for `brain edit` |
+| `editor` | `$EDITOR` | Editor for `xbrain edit` |
 | `dateFormat` | `relative` | Display format: `relative`, `absolute`, or `locale` |
 
 ```bash
 # View all config
-brain config
+xbrain config
 
 # Set a value
-brain config defaultType todo
-brain config dateFormat absolute
+xbrain config defaultType todo
+xbrain config dateFormat absolute
 ```
 
 ## Claude Code Integration
 
-This CLI includes a skill that teaches Claude Code how to use brain-dump effectively.
+This CLI includes a skill that teaches Claude Code how to use xbrain effectively.
 
 ```bash
 # Install the skill
-brain install-skill
+xbrain install-skill
 
 # Uninstall
-brain install-skill --uninstall
+xbrain install-skill --uninstall
 ```
 
 Once installed, Claude Code can help you:
@@ -142,29 +142,29 @@ Once installed, Claude Code can help you:
 - Review and triage your entries
 - Organize projects hierarchically
 - Generate daily/weekly reviews
-- Follow your saved preferences from `brain preferences`
+- Follow your saved preferences from `xbrain preferences`
 
 ## User Preferences (Memory)
 
-Preferences are stored at `~/.config/brain-dump/user-preferences.md` and are readable by agents.
+Preferences are stored at `~/.config/xbrain/user-preferences.md` and are readable by agents.
 
 ```bash
 # View preferences
-brain preferences
+xbrain preferences
 
 # Edit in $EDITOR
-brain preferences --edit
+xbrain preferences --edit
 
 # Append to a section
-brain preferences --append "## About Me" "I prefer concise summaries."
+xbrain preferences --append "## About Me" "I prefer concise summaries."
 
 # Reset to template
-brain preferences --reset
+xbrain preferences --reset
 ```
 
 ## Data Storage
 
-All data is stored locally at `~/.config/brain-dump/`:
+All data is stored locally at `~/.config/xbrain/`:
 
 | File | Description |
 |------|-------------|
@@ -178,8 +178,8 @@ All data is stored locally at `~/.config/brain-dump/`:
 
 ```bash
 # Clone and install
-git clone https://github.com/yourusername/brain-dump-cli.git
-cd brain-dump-cli
+git clone https://github.com/yourusername/xbrain-cli.git
+cd xbrain-cli
 npm install
 
 # Run locally

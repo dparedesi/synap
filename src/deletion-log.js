@@ -7,7 +7,7 @@ const path = require('path');
 const os = require('os');
 
 // Storage directory
-const CONFIG_DIR = process.env.BRAIN_DUMP_DIR || path.join(os.homedir(), '.config', 'brain-dump');
+const CONFIG_DIR = process.env.XBRAIN_DIR || path.join(os.homedir(), '.config', 'xbrain');
 const DELETION_LOG_FILE = path.join(CONFIG_DIR, 'deletion-log.json');
 
 /**

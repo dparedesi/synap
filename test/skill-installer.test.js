@@ -6,14 +6,14 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-const TEST_HOME = path.join(os.tmpdir(), `brain-dump-skill-${Date.now()}`);
+const TEST_HOME = path.join(os.tmpdir(), `xbrain-skill-${Date.now()}`);
 const ORIGINAL_HOME = process.env.HOME;
 const ORIGINAL_USERPROFILE = process.env.USERPROFILE;
 const TARGET_SKILL_FILE = path.join(
   TEST_HOME,
   '.claude',
   'skills',
-  'brain-dump-assistant',
+  'xbrain-assistant',
   'SKILL.md'
 );
 
@@ -44,7 +44,7 @@ describe('skill installer', () => {
 
     expect(result.installed).toBe(true);
     const content = fs.readFileSync(TARGET_SKILL_FILE, 'utf8');
-    expect(content).toMatch(/source:\s*brain-dump-cli/);
+    expect(content).toMatch(/source:\s*xbrain-cli/);
     expect(content).toMatch(/hash:\s*[a-f0-9]{32}/);
   });
 

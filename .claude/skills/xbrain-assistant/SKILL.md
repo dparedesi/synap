@@ -1,11 +1,11 @@
 ---
-name: brain-dump-assistant
-source: brain-dump-cli
-hash: 9fe14195d8135ee288c4a269ac1c110c
-description: Manage a personal knowledge capture system. Use when the user wants to capture ideas, track todos, organize projects, review their brain dump, or mentions "brain dump", "capture this", "add to my list", "what's on my plate", "what should I focus on", or "daily review".
+name: xbrain-assistant
+source: xbrain-cli
+description: Manage a personal knowledge capture system. Use when the user wants to capture ideas, track todos, organize projects, review their xbrain, or mentions "xbrain", "brain dump", "capture this", "add to my list", "what's on my plate", "what should I focus on", or "daily review".
+hash: 739fbda925a932c773bcec0322c46792
 ---
 
-# Brain Dump Assistant
+# xbrain Assistant
 
 A CLI for externalizing your working memory - capture ideas, projects, features, todos, and questions without the overhead of complex tools.
 
@@ -13,14 +13,14 @@ A CLI for externalizing your working memory - capture ideas, projects, features,
 
 Your brain is for having ideas, not holding them. But sticky notes get lost, notepads pile up unread, and tools like Asana are overkill for personal capture.
 
-**brain-dump** solves this by providing:
+**xbrain** solves this by providing:
 - **Zero-friction capture** - dump thoughts in seconds
 - **Structured retrieval** - find anything with search and filters
 - **AI-assisted triage** - agents help you organize, prioritize, and act
 
 ## Agent Mindset
 
-When assisting users with their brain dump:
+When assisting users with their xbrain entries:
 
 1. **Capture first, organize later** - Never block on classification during fast capture. Get the thought out, refine later.
 
@@ -36,10 +36,10 @@ When assisting users with their brain dump:
 
 ## User Preferences (Memory)
 
-brain-dump stores long-term user preferences at `~/.config/brain-dump/user-preferences.md`.
+xbrain stores long-term user preferences at `~/.config/xbrain/user-preferences.md`.
 
 - Read preferences at the start of a session when present.
-- Append stable, reusable preferences with `brain preferences --append "## Section" "..."`.
+- Append stable, reusable preferences with `xbrain preferences --append "## Section" "..."`.
 - Avoid overwriting user-written content; prefer section-based appends.
 
 ## Operating Modes
@@ -50,7 +50,7 @@ Detect user intent and respond appropriately:
 |------|----------|----------|
 | **Capture** | "Add this...", "Remind me...", "I had an idea..." | Fast capture, minimal questions, default to idea type |
 | **Review** | "What's on my plate?", "Daily review", "Show me..." | Stats + prioritized summary, grouped by type |
-| **Triage** | "Process my brain dump", "What needs attention?" | Surface raw entries, help classify and prioritize |
+| **Triage** | "Process my xbrain", "Process my brain dump", "What needs attention?" | Surface raw entries, help classify and prioritize |
 | **Focus** | "What should I work on?", "Priority items" | P1 todos + active projects, clear next actions |
 | **Cleanup** | "Archive completed", "Clean up old stuff" | Bulk operations with preview and confirmation |
 
@@ -65,41 +65,41 @@ Detect user intent and respond appropriately:
 
 | Task | Command |
 |------|---------|
-| Capture idea | `brain add "your thought here"` |
-| Add todo | `brain todo "task description"` |
-| Add question | `brain question "what you're wondering"` |
-| List active | `brain list` |
-| See all | `brain list --all` |
-| Search | `brain search "keyword"` |
-| Show details | `brain show <id>` |
-| Mark done | `brain done <id>` |
-| Get stats | `brain stats` |
-| Setup wizard | `brain setup` |
-| Edit preferences | `brain preferences --edit` |
+| Capture idea | `xbrain add "your thought here"` |
+| Add todo | `xbrain todo "task description"` |
+| Add question | `xbrain question "what you're wondering"` |
+| List active | `xbrain list` |
+| See all | `xbrain list --all` |
+| Search | `xbrain search "keyword"` |
+| Show details | `xbrain show <id>` |
+| Mark done | `xbrain done <id>` |
+| Get stats | `xbrain stats` |
+| Setup wizard | `xbrain setup` |
+| Edit preferences | `xbrain preferences --edit` |
 
 ## Pre-flight Check
 
 Before operations, verify the tool is ready:
 
 ```bash
-brain --version   # Verify installed
-brain stats       # Quick health check
+xbrain --version   # Verify installed
+xbrain stats       # Quick health check
 ```
 
-If `brain: command not found`, the user needs to install: `npm install -g brain-dump`
+If `xbrain: command not found`, the user needs to install: `npm install -g xbrain`
 
 ## Command Reference
 
 ### Capture Commands
 
-#### `brain add <content>`
+#### `xbrain add <content>`
 Quick capture of a thought.
 
 ```bash
-brain add "What if we used a graph database?"
-brain add "Need to review the API design" --type todo --priority 1
-brain add "Meeting notes from standup" --type note --tags "meetings,weekly"
-brain add --type project --title "Website Redesign" "Complete overhaul of the marketing site..."
+xbrain add "What if we used a graph database?"
+xbrain add "Need to review the API design" --type todo --priority 1
+xbrain add "Meeting notes from standup" --type note --tags "meetings,weekly"
+xbrain add --type project --title "Website Redesign" "Complete overhaul of the marketing site..."
 ```
 
 **Options**:
@@ -110,36 +110,36 @@ brain add --type project --title "Website Redesign" "Complete overhaul of the ma
 - `--parent <id>`: Parent entry ID
 - `--json`: JSON output
 
-#### `brain todo <content>`
+#### `xbrain todo <content>`
 Shorthand for adding a todo.
 
 ```bash
-brain todo "Review PR #42"
-# Equivalent to: brain add "Review PR #42" --type todo
+xbrain todo "Review PR #42"
+# Equivalent to: xbrain add "Review PR #42" --type todo
 ```
 
-#### `brain question <content>`
+#### `xbrain question <content>`
 Shorthand for adding a question.
 
 ```bash
-brain question "Should we migrate to TypeScript?"
-# Equivalent to: brain add "..." --type question
+xbrain question "Should we migrate to TypeScript?"
+# Equivalent to: xbrain add "..." --type question
 ```
 
 ### Query Commands
 
-#### `brain list`
+#### `xbrain list`
 List entries with filtering.
 
 ```bash
-brain list                              # Active + raw (default)
-brain list --all                        # All except archived
-brain list --type todo                  # Only todos
-brain list --status raw                 # Needs triage
-brain list --priority 1                 # High priority only
-brain list --tags work,urgent           # Has ALL specified tags
-brain list --since 7d                   # Created in last 7 days
-brain list --json                       # JSON output for parsing
+xbrain list                              # Active + raw (default)
+xbrain list --all                        # All except archived
+xbrain list --type todo                  # Only todos
+xbrain list --status raw                 # Needs triage
+xbrain list --priority 1                 # High priority only
+xbrain list --tags work,urgent           # Has ALL specified tags
+xbrain list --since 7d                   # Created in last 7 days
+xbrain list --json                       # JSON output for parsing
 ```
 
 **Options**:
@@ -158,89 +158,89 @@ brain list --json                       # JSON output for parsing
 - `--reverse`: Reverse sort order
 - `--json`: JSON output
 
-#### `brain show <id>`
+#### `xbrain show <id>`
 Show full entry details.
 
 ```bash
-brain show a1b2c3d4
-brain show a1b2c3d4 --with-children
-brain show a1b2c3d4 --with-related
-brain show a1b2c3d4 --json
+xbrain show a1b2c3d4
+xbrain show a1b2c3d4 --with-children
+xbrain show a1b2c3d4 --with-related
+xbrain show a1b2c3d4 --json
 ```
 
-#### `brain search <query>`
+#### `xbrain search <query>`
 Full-text search across content and titles.
 
 ```bash
-brain search "database"
-brain search "meeting" --type note --since 30d
-brain search "API" --json
+xbrain search "database"
+xbrain search "meeting" --type note --since 30d
+xbrain search "API" --json
 ```
 
 ### Modify Commands
 
-#### `brain edit <id>`
+#### `xbrain edit <id>`
 Edit entry content.
 
 ```bash
-brain edit a1b2c3d4                          # Opens $EDITOR
-brain edit a1b2c3d4 --content "New text"     # Non-interactive
-brain edit a1b2c3d4 --append "Follow-up"     # Add to existing
-brain edit a1b2c3d4 --title "New title"
+xbrain edit a1b2c3d4                          # Opens $EDITOR
+xbrain edit a1b2c3d4 --content "New text"     # Non-interactive
+xbrain edit a1b2c3d4 --append "Follow-up"     # Add to existing
+xbrain edit a1b2c3d4 --title "New title"
 ```
 
-#### `brain set <id>`
+#### `xbrain set <id>`
 Update entry metadata.
 
 ```bash
-brain set a1b2c3d4 --type project
-brain set a1b2c3d4 --status active
-brain set a1b2c3d4 --priority 1
-brain set a1b2c3d4 --tags "work,Q1"
-brain set a1b2c3d4 --add-tags "important"
-brain set a1b2c3d4 --remove-tags "draft"
-brain set a1b2c3d4 --clear-priority
-brain set a1b2c3d4 --parent b2c3d4e5
+xbrain set a1b2c3d4 --type project
+xbrain set a1b2c3d4 --status active
+xbrain set a1b2c3d4 --priority 1
+xbrain set a1b2c3d4 --tags "work,Q1"
+xbrain set a1b2c3d4 --add-tags "important"
+xbrain set a1b2c3d4 --remove-tags "draft"
+xbrain set a1b2c3d4 --clear-priority
+xbrain set a1b2c3d4 --parent b2c3d4e5
 ```
 
-#### `brain link <id1> <id2>`
+#### `xbrain link <id1> <id2>`
 Create relationships between entries.
 
 ```bash
-brain link a1b2c3d4 b2c3d4e5                # Add to related
-brain link a1b2c3d4 b2c3d4e5 --as-parent    # Set hierarchy
-brain link a1b2c3d4 b2c3d4e5 --unlink       # Remove relationship
+xbrain link a1b2c3d4 b2c3d4e5                # Add to related
+xbrain link a1b2c3d4 b2c3d4e5 --as-parent    # Set hierarchy
+xbrain link a1b2c3d4 b2c3d4e5 --unlink       # Remove relationship
 ```
 
 ### Bulk Commands
 
-#### `brain done <ids...>`
+#### `xbrain done <ids...>`
 Mark entries as done.
 
 ```bash
-brain done a1b2c3d4
-brain done a1b2c3d4 b2c3d4e5 c3d4e5f6       # Multiple
-brain done --type todo --tags "sprint-1"     # By filter
-brain done --dry-run --type todo             # Preview first
+xbrain done a1b2c3d4
+xbrain done a1b2c3d4 b2c3d4e5 c3d4e5f6       # Multiple
+xbrain done --type todo --tags "sprint-1"     # By filter
+xbrain done --dry-run --type todo             # Preview first
 ```
 
-#### `brain archive <ids...>`
+#### `xbrain archive <ids...>`
 Archive entries (hides from default view).
 
 ```bash
-brain archive a1b2c3d4
-brain archive --status done --since 30d      # Old completed items
-brain archive --dry-run --status done        # Preview
+xbrain archive a1b2c3d4
+xbrain archive --status done --since 30d      # Old completed items
+xbrain archive --dry-run --status done        # Preview
 ```
 
-#### `brain delete <ids...>`
+#### `xbrain delete <ids...>`
 Delete entries (logged for undo).
 
 ```bash
-brain delete a1b2c3d4
-brain delete a1b2c3d4 b2c3d4e5 --confirm
-brain delete --status archived --since 90d   # Permanent cleanup
-brain delete --dry-run --type reference      # Preview
+xbrain delete a1b2c3d4
+xbrain delete a1b2c3d4 b2c3d4e5 --confirm
+xbrain delete --status archived --since 90d   # Permanent cleanup
+xbrain delete --dry-run --type reference      # Preview
 ```
 
 **Safety**:
@@ -248,43 +248,43 @@ brain delete --dry-run --type reference      # Preview
 - >10 entries requires `--confirm` or `--force`
 - Entries with children require `--force`
 
-#### `brain restore`
+#### `xbrain restore`
 Restore deleted entries.
 
 ```bash
-brain restore --last 1                       # Most recent
-brain restore --last 5                       # Last 5
-brain restore --ids a1b2c3d4,b2c3d4e5        # Specific IDs
-brain restore --list                         # Show deletion log
+xbrain restore --last 1                       # Most recent
+xbrain restore --last 5                       # Last 5
+xbrain restore --ids a1b2c3d4,b2c3d4e5        # Specific IDs
+xbrain restore --list                         # Show deletion log
 ```
 
 ### Maintenance Commands
 
-#### `brain stats`
+#### `xbrain stats`
 Overview statistics.
 
 ```bash
-brain stats
-brain stats --json
+xbrain stats
+xbrain stats --json
 ```
 
-#### `brain export`
+#### `xbrain export`
 Export entries.
 
 ```bash
-brain export                                 # All to stdout
-brain export --file backup.json              # To file
-brain export --type todo --status active     # Filtered
+xbrain export                                 # All to stdout
+xbrain export --file backup.json              # To file
+xbrain export --type todo --status active     # Filtered
 ```
 
-#### `brain import <file>`
+#### `xbrain import <file>`
 Import entries.
 
 ```bash
-brain import backup.json
-brain import backup.json --dry-run
-brain import backup.json --merge             # Update existing + add new
-brain import backup.json --skip-existing     # Only add new
+xbrain import backup.json
+xbrain import backup.json --dry-run
+xbrain import backup.json --merge             # Update existing + add new
+xbrain import backup.json --skip-existing     # Only add new
 ```
 
 ## Workflow Patterns
@@ -293,41 +293,41 @@ brain import backup.json --skip-existing     # Only add new
 
 Run this each morning to get oriented:
 
-1. **Health check**: `brain stats`
-2. **Triage raw entries**: `brain list --status raw`
-3. **Focus list**: `brain list --priority 1 --type todo`
+1. **Health check**: `xbrain stats`
+2. **Triage raw entries**: `xbrain list --status raw`
+3. **Focus list**: `xbrain list --priority 1 --type todo`
 4. **Help user decide** what to work on first
 
 ### Weekly Review
 
 Run this weekly to maintain hygiene:
 
-1. **Celebrate**: `brain list --done --since 7d` - show what was accomplished
-2. **Check stalled**: `brain list --status active --sort updated` - find items not touched
-3. **Review projects**: `brain list --type project` - are they progressing?
-4. **Clean up**: `brain archive --status done --since 7d` - archive completed items
+1. **Celebrate**: `xbrain list --done --since 7d` - show what was accomplished
+2. **Check stalled**: `xbrain list --status active --sort updated` - find items not touched
+3. **Review projects**: `xbrain list --type project` - are they progressing?
+4. **Clean up**: `xbrain archive --status done --since 7d` - archive completed items
 
 ### Triage Workflow
 
 When user has many raw entries:
 
-1. **Fetch**: `brain list --status raw --json`
+1. **Fetch**: `xbrain list --status raw --json`
 2. **For each entry**, determine:
    - Type (idea, todo, project, question, reference, note)
    - Priority (1, 2, 3, or none)
    - Tags (infer from content)
    - Parent (if belongs to existing project/feature)
-3. **Update**: `brain set <id> --type todo --priority 1 --tags "work"`
+3. **Update**: `xbrain set <id> --type todo --priority 1 --tags "work"`
 4. **If entry is actually multiple items**, split and re-capture
-5. **Mark refined**: `brain set <id> --status active`
+5. **Mark refined**: `xbrain set <id> --status active`
 
 ### Capture Mode
 
 When user is dumping thoughts rapidly:
 
-1. Just capture with `brain add "..."` - don't interrupt for classification
+1. Just capture with `xbrain add "..."` - don't interrupt for classification
 2. Use default type (idea) and status (raw)
-3. After the brain dump session, offer to triage
+3. After the capture session, offer to triage
 
 ## Classification Rules
 
@@ -358,14 +358,14 @@ When user is dumping thoughts rapidly:
 
 1. **Never auto-delete** - Always show what will be deleted and confirm
 2. **Preserve context** - Don't summarize away important details during capture
-3. **Log before delete** - All deletions are recoverable via `brain restore`
+3. **Log before delete** - All deletions are recoverable via `xbrain restore`
 4. **Confirm bulk operations** - Operations affecting >10 entries require confirmation
 5. **Don't over-organize** - Simple thoughts don't need tags, priorities, and parents
 
 ## Proactive Recommendation Patterns
 
-- If raw entries are piling up, suggest `brain triage`.
-- If P1 todos exist, suggest `brain focus`.
+- If raw entries are piling up, suggest `xbrain triage`.
+- If P1 todos exist, suggest `xbrain focus`.
 - If many stale active items exist, suggest a weekly review.
 - If preferences specify cadence, follow it by default.
 
@@ -379,9 +379,9 @@ When user is dumping thoughts rapidly:
 
 Critical for preventing accidental mass changes:
 
-1. **Preview**: `brain delete --status archived --since 90d --dry-run`
+1. **Preview**: `xbrain delete --status archived --since 90d --dry-run`
 2. **Confirm**: Show user what will be affected, get explicit approval
-3. **Execute**: `brain delete --ids "<specific-ids>" --confirm`
+3. **Execute**: `xbrain delete --ids "<specific-ids>" --confirm`
 
 **Principle**: Filters are for DISCOVERY, IDs are for EXECUTION.
 
@@ -389,33 +389,33 @@ Critical for preventing accidental mass changes:
 
 | User Says | Interpretation | Action |
 |-----------|----------------|--------|
-| "Add this to my brain dump" | Fast capture | `brain add "<content>"` |
-| "I need to remember to..." | Todo item | `brain todo "<content>"` |
-| "What's on my plate?" | Need overview | `brain stats` + `brain list --priority 1` |
-| "What should I focus on?" | Need priorities | `brain list --priority 1 --type todo` |
-| "Process my brain dump" | Triage needed | Run triage workflow on raw entries |
-| "This is done" / "I finished X" | Mark complete | `brain done <id>` |
-| "Archive old stuff" | Cleanup | `brain archive --status done --since 30d` |
-| "What did I do this week?" | Review completions | `brain list --done --since 7d` |
-| "Find anything about X" | Search | `brain search "X"` |
-| "Link these together" | Create relationship | `brain link <id1> <id2>` |
+| "Add this to my xbrain" | Fast capture | `xbrain add "<content>"` |
+| "I need to remember to..." | Todo item | `xbrain todo "<content>"` |
+| "What's on my plate?" | Need overview | `xbrain stats` + `xbrain list --priority 1` |
+| "What should I focus on?" | Need priorities | `xbrain list --priority 1 --type todo` |
+| "Process my xbrain" | Triage needed | Run triage workflow on raw entries |
+| "This is done" / "I finished X" | Mark complete | `xbrain done <id>` |
+| "Archive old stuff" | Cleanup | `xbrain archive --status done --since 30d` |
+| "What did I do this week?" | Review completions | `xbrain list --done --since 7d` |
+| "Find anything about X" | Search | `xbrain search "X"` |
+| "Link these together" | Create relationship | `xbrain link <id1> <id2>` |
 
 ## Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
-| `brain: command not found` | Run `npm install -g brain-dump` |
-| Empty brain dump | Start with `brain add "My first thought"` |
+| `xbrain: command not found` | Run `npm install -g xbrain` |
+| Empty xbrain | Start with `xbrain add "My first thought"` |
 | Too many raw entries | Run triage workflow |
-| Can't find entry | Use `brain search "<keyword>"` |
-| Accidentally deleted | Use `brain restore --last 1` |
-| Wrong type/status | Use `brain set <id> --type <type> --status <status>` |
+| Can't find entry | Use `xbrain search "<keyword>"` |
+| Accidentally deleted | Use `xbrain restore --last 1` |
+| Wrong type/status | Use `xbrain set <id> --type <type> --status <status>` |
 
 ## Testing / Evaluation Scenarios
 
 | Scenario | Expected Behavior | Failure Indicator |
 |----------|-------------------|-------------------|
-| User says "capture this" | Immediate `brain add`, no questions | Asking for type/priority during fast capture |
+| User says "capture this" | Immediate `xbrain add`, no questions | Asking for type/priority during fast capture |
 | User says "what's on my plate" | Stats + prioritized summary | Listing all 50 entries individually |
 | User says "clean up" | Preview + confirmation | Auto-archiving without preview |
 | Large deletion (>10 items) | Show count, ask confirmation | Proceeding without confirmation |
@@ -471,6 +471,6 @@ Critical for preventing accidental mass changes:
 ## Remember
 
 - The goal is to **externalize working memory**, not build a perfect system
-- Capture is king - never block a brain dump
+- Capture is king - never block a capture
 - Structure serves retrieval, not organizational perfection
 - The best system is one that gets used

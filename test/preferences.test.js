@@ -6,15 +6,15 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-const TEST_DIR = path.join(os.tmpdir(), `brain-dump-preferences-${Date.now()}`);
-const ORIGINAL_BRAIN_DUMP_DIR = process.env.BRAIN_DUMP_DIR;
+const TEST_DIR = path.join(os.tmpdir(), `xbrain-preferences-${Date.now()}`);
+const ORIGINAL_XBRAIN_DIR = process.env.XBRAIN_DIR;
 
 let preferences;
 
 describe('preferences', () => {
   beforeEach(async () => {
     vi.resetModules();
-    process.env.BRAIN_DUMP_DIR = TEST_DIR;
+    process.env.XBRAIN_DIR = TEST_DIR;
     if (fs.existsSync(TEST_DIR)) {
       fs.rmSync(TEST_DIR, { recursive: true, force: true });
     }
@@ -26,10 +26,10 @@ describe('preferences', () => {
     if (fs.existsSync(TEST_DIR)) {
       fs.rmSync(TEST_DIR, { recursive: true, force: true });
     }
-    if (ORIGINAL_BRAIN_DUMP_DIR === undefined) {
-      delete process.env.BRAIN_DUMP_DIR;
+    if (ORIGINAL_XBRAIN_DIR === undefined) {
+      delete process.env.XBRAIN_DIR;
     } else {
-      process.env.BRAIN_DUMP_DIR = ORIGINAL_BRAIN_DUMP_DIR;
+      process.env.XBRAIN_DIR = ORIGINAL_XBRAIN_DIR;
     }
   });
 

@@ -1,4 +1,4 @@
-# brain-dump CLI Specification
+# xbrain CLI Specification
 
 > A CLI for externalizing your working memory
 
@@ -77,7 +77,7 @@ interface Entry {
 
 ### Location
 
-All data is stored in `~/.config/brain-dump/`.
+All data is stored in `~/.config/xbrain/`.
 
 ### Files
 
@@ -113,23 +113,23 @@ Version field enables future migrations.
 
 | Category | Command | Description |
 |----------|---------|-------------|
-| **Capture** | `brain add <text>` | Quick capture (default: raw idea) |
-| | `brain todo <text>` | Shorthand for `--type todo` |
-| | `brain question <text>` | Shorthand for `--type question` |
-| **Query** | `brain list` | List entries (filtered) |
-| | `brain show <id>` | Show full entry details |
-| | `brain search <query>` | Full-text search |
-| **Modify** | `brain edit <id>` | Edit entry content |
-| | `brain set <id>` | Update metadata (type, status, priority, tags) |
-| | `brain link <id1> <id2>` | Create relationships |
-| **Bulk** | `brain done <ids...>` | Mark entries as done |
-| | `brain archive <ids...>` | Archive entries |
-| | `brain delete <ids...>` | Delete entries (with logging) |
-| | `brain restore` | Restore deleted entries |
-| **Maintenance** | `brain stats` | Overview statistics |
-| | `brain export` | Export entries |
-| | `brain import` | Import entries |
-| | `brain install-skill` | Install Claude Code skill |
+| **Capture** | `xbrain add <text>` | Quick capture (default: raw idea) |
+| | `xbrain todo <text>` | Shorthand for `--type todo` |
+| | `xbrain question <text>` | Shorthand for `--type question` |
+| **Query** | `xbrain list` | List entries (filtered) |
+| | `xbrain show <id>` | Show full entry details |
+| | `xbrain search <query>` | Full-text search |
+| **Modify** | `xbrain edit <id>` | Edit entry content |
+| | `xbrain set <id>` | Update metadata (type, status, priority, tags) |
+| | `xbrain link <id1> <id2>` | Create relationships |
+| **Bulk** | `xbrain done <ids...>` | Mark entries as done |
+| | `xbrain archive <ids...>` | Archive entries |
+| | `xbrain delete <ids...>` | Delete entries (with logging) |
+| | `xbrain restore` | Restore deleted entries |
+| **Maintenance** | `xbrain stats` | Overview statistics |
+| | `xbrain export` | Export entries |
+| | `xbrain import` | Import entries |
+| | `xbrain install-skill` | Install Claude Code skill |
 
 ### Global Flags
 
@@ -143,15 +143,15 @@ Version field enables future migrations.
 
 ### Capture Commands
 
-#### `brain add <content>`
+#### `xbrain add <content>`
 
 Quick capture of a thought.
 
 ```bash
-brain add "What if we used SQLite instead of JSON files?"
-brain add "Need to review PR #42" --type todo --priority 1
-brain add "Meeting with Sarah about Q1 planning" --type note --tags "meetings,Q1"
-brain add --type project --title "Brain Dump CLI" "Build a CLI for capturing thoughts..."
+xbrain add "What if we used SQLite instead of JSON files?"
+xbrain add "Need to review PR #42" --type todo --priority 1
+xbrain add "Meeting with Sarah about Q1 planning" --type note --tags "meetings,Q1"
+xbrain add --type project --title "xbrain CLI" "Build a CLI for capturing thoughts..."
 ```
 
 **Options**:
@@ -178,43 +178,43 @@ Added idea a1b2c3d4: "What if we used SQLite instead of JSON files?"
 }
 ```
 
-#### `brain todo <content>`
+#### `xbrain todo <content>`
 
 Shorthand for adding a todo.
 
 ```bash
-brain todo "Review PR #42"
-# Equivalent to: brain add "Review PR #42" --type todo
+xbrain todo "Review PR #42"
+# Equivalent to: xbrain add "Review PR #42" --type todo
 ```
 
-#### `brain question <content>`
+#### `xbrain question <content>`
 
 Shorthand for adding a question.
 
 ```bash
-brain question "Should we use SQLite or JSON files?"
-# Equivalent to: brain add "Should we use SQLite or JSON files?" --type question
+xbrain question "Should we use SQLite or JSON files?"
+# Equivalent to: xbrain add "Should we use SQLite or JSON files?" --type question
 ```
 
 ---
 
 ### Query Commands
 
-#### `brain list`
+#### `xbrain list`
 
 List entries with filtering.
 
 ```bash
-brain list                              # Active + raw entries (default)
-brain list --all                        # All entries except archived
-brain list --type todo                  # Only todos
-brain list --status raw                 # Only raw entries (need triage)
-brain list --tags work,urgent           # Entries with ALL specified tags
-brain list --priority 1                 # High priority only
-brain list --parent a1b2c3d4            # Children of specific entry
-brain list --since 7d                   # Created in last 7 days
-brain list --limit 20                   # Max 20 results
-brain list --json                       # JSON output for agents
+xbrain list                              # Active + raw entries (default)
+xbrain list --all                        # All entries except archived
+xbrain list --type todo                  # Only todos
+xbrain list --status raw                 # Only raw entries (need triage)
+xbrain list --tags work,urgent           # Entries with ALL specified tags
+xbrain list --priority 1                 # High priority only
+xbrain list --parent a1b2c3d4            # Children of specific entry
+xbrain list --since 7d                   # Created in last 7 days
+xbrain list --limit 20                   # Max 20 results
+xbrain list --json                       # JSON output for agents
 ```
 
 **Options**:
@@ -241,12 +241,12 @@ brain list --json                       # JSON output for agents
 Entries (12 total, showing active + raw)
 
 IDEAS (3)
-  a1b2c3d4  [P1] Brain dump CLI concept              #tools #productivity
+  a1b2c3d4  [P1] xbrain CLI concept                  #tools #productivity
   b2c3d4e5       What if we used SQLite?             #technical
 
 TODOS (5)
   c3d4e5f6  [P1] Review PR #42                       #work
-  d4e5f6g7  [P2] Write SPEC.md for brain-dump        #work #writing
+  d4e5f6g7  [P2] Write SPEC.md for xbrain        #work #writing
   ...
 
 QUESTIONS (2)
@@ -267,15 +267,15 @@ Tip: Use --type todo to see only todos
 }
 ```
 
-#### `brain show <id>`
+#### `xbrain show <id>`
 
 Show full entry details.
 
 ```bash
-brain show a1b2c3d4
-brain show a1b2c3d4 --with-children     # Include child entries
-brain show a1b2c3d4 --with-related      # Include related entries
-brain show a1b2c3d4 --json
+xbrain show a1b2c3d4
+xbrain show a1b2c3d4 --with-children     # Include child entries
+xbrain show a1b2c3d4 --with-related      # Include related entries
+xbrain show a1b2c3d4 --json
 ```
 
 **Options**:
@@ -295,7 +295,7 @@ Entry a1b2c3d4-e5f6-7890-abcd-ef1234567890
   Priority: P1 (high)
   Tags:     #tools #productivity #agents
 
-  Title: Brain dump CLI concept
+  Title: xbrain CLI concept
 
   Content:
   Build a CLI tool for capturing thoughts without the overhead of Asana.
@@ -309,14 +309,14 @@ Entry a1b2c3d4-e5f6-7890-abcd-ef1234567890
   Related:  f7e8d9c0 (reference: "Agent-Ready CLI pattern")
 ```
 
-#### `brain search <query>`
+#### `xbrain search <query>`
 
 Full-text search across content and titles.
 
 ```bash
-brain search "SQLite"
-brain search "agent" --type idea
-brain search "meeting" --since 30d --json
+xbrain search "SQLite"
+xbrain search "agent" --type idea
+xbrain search "meeting" --since 30d --json
 ```
 
 **Options**:
@@ -333,15 +333,15 @@ brain search "meeting" --since 30d --json
 
 ### Modify Commands
 
-#### `brain edit <id>`
+#### `xbrain edit <id>`
 
 Edit entry content.
 
 ```bash
-brain edit a1b2c3d4                          # Opens $EDITOR
-brain edit a1b2c3d4 --content "New content"  # Non-interactive
-brain edit a1b2c3d4 --title "New title"
-brain edit a1b2c3d4 --append "Additional thought"
+xbrain edit a1b2c3d4                          # Opens $EDITOR
+xbrain edit a1b2c3d4 --content "New content"  # Non-interactive
+xbrain edit a1b2c3d4 --title "New title"
+xbrain edit a1b2c3d4 --append "Additional thought"
 ```
 
 **Options**:
@@ -353,19 +353,19 @@ brain edit a1b2c3d4 --append "Additional thought"
 | `--append <text>` | Append to content |
 | `--json` | Output as JSON |
 
-#### `brain set <id>`
+#### `xbrain set <id>`
 
 Update entry metadata.
 
 ```bash
-brain set a1b2c3d4 --type project
-brain set a1b2c3d4 --status active
-brain set a1b2c3d4 --priority 1
-brain set a1b2c3d4 --tags "work,urgent,Q1"
-brain set a1b2c3d4 --add-tags "important"
-brain set a1b2c3d4 --remove-tags "draft"
-brain set a1b2c3d4 --clear-priority
-brain set a1b2c3d4 --type todo --priority 1 --tags "work"  # Multiple at once
+xbrain set a1b2c3d4 --type project
+xbrain set a1b2c3d4 --status active
+xbrain set a1b2c3d4 --priority 1
+xbrain set a1b2c3d4 --tags "work,urgent,Q1"
+xbrain set a1b2c3d4 --add-tags "important"
+xbrain set a1b2c3d4 --remove-tags "draft"
+xbrain set a1b2c3d4 --clear-priority
+xbrain set a1b2c3d4 --type todo --priority 1 --tags "work"  # Multiple at once
 ```
 
 **Options**:
@@ -383,30 +383,30 @@ brain set a1b2c3d4 --type todo --priority 1 --tags "work"  # Multiple at once
 | `--clear-parent` | Remove parent |
 | `--json` | Output as JSON |
 
-#### `brain link <id1> <id2>`
+#### `xbrain link <id1> <id2>`
 
 Create relationship between entries.
 
 ```bash
-brain link a1b2c3d4 b2c3d4e5                # Add to related
-brain link a1b2c3d4 b2c3d4e5 --as-parent    # Set b2c3d4e5 as parent of a1b2c3d4
-brain link a1b2c3d4 b2c3d4e5 --as-child     # Set b2c3d4e5 as child of a1b2c3d4
-brain link a1b2c3d4 b2c3d4e5 --unlink       # Remove relationship
+xbrain link a1b2c3d4 b2c3d4e5                # Add to related
+xbrain link a1b2c3d4 b2c3d4e5 --as-parent    # Set b2c3d4e5 as parent of a1b2c3d4
+xbrain link a1b2c3d4 b2c3d4e5 --as-child     # Set b2c3d4e5 as child of a1b2c3d4
+xbrain link a1b2c3d4 b2c3d4e5 --unlink       # Remove relationship
 ```
 
 ---
 
 ### Bulk Commands
 
-#### `brain done <ids...>`
+#### `xbrain done <ids...>`
 
 Mark entries as done.
 
 ```bash
-brain done a1b2c3d4
-brain done a1b2c3d4 b2c3d4e5 c3d4e5f6       # Multiple
-brain done --type todo --tags "sprint-1"     # By filter
-brain done --dry-run --type todo             # Preview
+xbrain done a1b2c3d4
+xbrain done a1b2c3d4 b2c3d4e5 c3d4e5f6       # Multiple
+xbrain done --type todo --tags "sprint-1"     # By filter
+xbrain done --dry-run --type todo             # Preview
 ```
 
 **Options**:
@@ -419,27 +419,27 @@ brain done --dry-run --type todo             # Preview
 | `--confirm` | Skip confirmation prompt |
 | `--json` | Output as JSON |
 
-#### `brain archive <ids...>`
+#### `xbrain archive <ids...>`
 
 Archive entries (hides from default view).
 
 ```bash
-brain archive a1b2c3d4
-brain archive --status done --since 30d      # Archive old completed items
-brain archive --dry-run --status done
+xbrain archive a1b2c3d4
+xbrain archive --status done --since 30d      # Archive old completed items
+xbrain archive --dry-run --status done
 ```
 
-Same options as `brain done`.
+Same options as `xbrain done`.
 
-#### `brain delete <ids...>`
+#### `xbrain delete <ids...>`
 
 Delete entries (logged for undo).
 
 ```bash
-brain delete a1b2c3d4
-brain delete a1b2c3d4 b2c3d4e5 --confirm
-brain delete --status archived --since 90d   # Clean up old archives
-brain delete --dry-run --type reference --tags "temp"
+xbrain delete a1b2c3d4
+xbrain delete a1b2c3d4 b2c3d4e5 --confirm
+xbrain delete --status archived --since 90d   # Clean up old archives
+xbrain delete --dry-run --type reference --tags "temp"
 ```
 
 **Options**:
@@ -461,33 +461,33 @@ brain delete --dry-run --type reference --tags "temp"
 - Deleting entries with children requires `--force`
 - Shows preview even with `--confirm` for filter-based deletions
 
-#### `brain restore`
+#### `xbrain restore`
 
 Restore deleted entries.
 
 ```bash
-brain restore --last 1                       # Restore most recent deletion
-brain restore --last 5                       # Restore last 5
-brain restore --ids a1b2c3d4,b2c3d4e5        # Restore specific IDs
-brain restore --list                         # Show deletion log
+xbrain restore --last 1                       # Restore most recent deletion
+xbrain restore --last 5                       # Restore last 5
+xbrain restore --ids a1b2c3d4,b2c3d4e5        # Restore specific IDs
+xbrain restore --list                         # Show deletion log
 ```
 
 ---
 
 ### Maintenance Commands
 
-#### `brain stats`
+#### `xbrain stats`
 
 Show entry statistics.
 
 ```bash
-brain stats
-brain stats --json
+xbrain stats
+xbrain stats --json
 ```
 
 **Human output**:
 ```
-Brain Dump Statistics
+xbrain Statistics
 
   Total entries: 47
   Active:        23
@@ -507,39 +507,39 @@ Brain Dump Statistics
   Created this week:  12
   Updated today:       3
 
-Tip: Run "brain list --status raw" to triage unprocessed entries
+Tip: Run "xbrain list --status raw" to triage unprocessed entries
 ```
 
-#### `brain export`
+#### `xbrain export`
 
 Export entries for backup or migration.
 
 ```bash
-brain export                                 # Export all to stdout
-brain export --file backup.json              # Export to file
-brain export --type todo --status active     # Export filtered
-brain export --format csv                    # CSV format
+xbrain export                                 # Export all to stdout
+xbrain export --file backup.json              # Export to file
+xbrain export --type todo --status active     # Export filtered
+xbrain export --format csv                    # CSV format
 ```
 
-#### `brain import`
+#### `xbrain import`
 
 Import entries from file.
 
 ```bash
-brain import backup.json
-brain import backup.json --dry-run           # Preview what would be imported
-brain import backup.json --merge             # Update existing, add new
-brain import backup.json --skip-existing     # Only add new entries
+xbrain import backup.json
+xbrain import backup.json --dry-run           # Preview what would be imported
+xbrain import backup.json --merge             # Update existing, add new
+xbrain import backup.json --skip-existing     # Only add new entries
 ```
 
-#### `brain install-skill`
+#### `xbrain install-skill`
 
 Install Claude Code skill for AI agents.
 
 ```bash
-brain install-skill
-brain install-skill --uninstall
-brain install-skill --force                  # Override ownership check
+xbrain install-skill
+xbrain install-skill --uninstall
+xbrain install-skill --force                  # Override ownership check
 ```
 
 ---
@@ -570,15 +570,15 @@ brain install-skill --force                  # Override ownership check
 ### Log Before Delete
 
 All deletions are logged to `deletion-log.json` BEFORE the delete operation. This enables:
-- `brain restore --last N` to undo recent deletions
-- `brain restore --ids <ids>` to restore specific entries
-- `brain restore --list` to see deletion history
+- `xbrain restore --last N` to undo recent deletions
+- `xbrain restore --ids <ids>` to restore specific entries
+- `xbrain restore --list` to see deletion history
 
 ### Two-Step Pattern for Bulk Operations
 
-1. **Preview**: `brain delete --status archived --since 90d --dry-run`
+1. **Preview**: `xbrain delete --status archived --since 90d --dry-run`
 2. **Confirm**: User reviews what will be affected
-3. **Execute**: `brain delete --ids "<ids>" --confirm`
+3. **Execute**: `xbrain delete --ids "<ids>" --confirm`
 
 **Principle**: Filters are for DISCOVERY, IDs are for EXECUTION.
 
@@ -634,7 +634,7 @@ All deletions are logged to `deletion-log.json` BEFORE the delete operation. Thi
 
 | Variable | Description |
 |----------|-------------|
-| `BRAIN_DUMP_DIR` | Override config directory (default: `~/.config/brain-dump`) |
+| `XBRAIN_DIR` | Override config directory (default: `~/.config/xbrain`) |
 | `EDITOR` | Editor for interactive edit |
 
 ---
@@ -643,9 +643,9 @@ All deletions are logged to `deletion-log.json` BEFORE the delete operation. Thi
 
 | Operation | Target |
 |-----------|--------|
-| `brain add` | < 100ms |
-| `brain list` | < 200ms (up to 1000 entries) |
-| `brain search` | < 500ms (full-text scan) |
+| `xbrain add` | < 100ms |
+| `xbrain list` | < 200ms (up to 1000 entries) |
+| `xbrain search` | < 500ms (full-text scan) |
 
 ---
 
