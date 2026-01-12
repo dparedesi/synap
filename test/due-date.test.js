@@ -14,6 +14,13 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 let storage;
 
+function diffDaysFromNow(dueDate) {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfDue = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+  return Math.round((startOfDue - startOfToday) / DAY_MS);
+}
+
 function runCli(args) {
   try {
     const result = execSync(`node ${CLI_PATH} ${args} --json`, {
@@ -133,6 +140,109 @@ describe('due date CLI', () => {
     expect(result.overdueItems.length).toBe(1);
     expect(result.overdueItems[0].id).toBe(overdue.entry.id);
     expect(result.p1Todos.some(item => item.id === p1Overdue.entry.id)).toBe(true);
+  });
+
+  it('accepts bare weekday names on add', () => {
+    const weekdays = [
+      ['sunday', 0],
+      ['monday', 1],
+      ['tuesday', 2],
+      ['wednesday', 3],
+      ['thursday', 4],
+      ['friday', 5],
+      ['saturday', 6]
+    ];
+
+    for (const [day, dayIndex] of weekdays) {
+      const result = runCli(`add "Weekday task" --due ${day}`);
+
+      expect(result.success).toBe(true);
+      expect(result.entry.due).toBeDefined();
+
+      const due = new Date(result.entry.due);
+      expect(due.getDay()).toBe(dayIndex);
+    }
+  });
+
+  it('accepts bare weekday names on set', () => {
+    const added = runCli('add "Set weekday"');
+    const id = added.entry.id.slice(0, 8);
+
+    const result = runCli(`set ${id} --due tuesday`);
+
+    expect(result.success).toBe(true);
+    expect(result.entry.due).toBeDefined();
+    expect(new Date(result.entry.due).getDay()).toBe(2);
+  });
+
+  it('accepts case-insensitive bare weekdays', () => {
+    const result = runCli('add "Case weekday" --due FrIdAy');
+
+    expect(result.success).toBe(true);
+    expect(result.entry.due).toBeDefined();
+    expect(new Date(result.entry.due).getDay()).toBe(5);
+  });
+});
+
+describe('bare weekday parsing (storage)', () => {
+  const fixedNow = new Date(2025, 0, 6, 12, 0, 0); // Monday
+
+  beforeEach(async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(fixedNow);
+    vi.resetModules();
+    process.env.SYNAP_DIR = STORAGE_DIR;
+    if (fs.existsSync(STORAGE_DIR)) {
+      fs.rmSync(STORAGE_DIR, { recursive: true, force: true });
+    }
+    fs.mkdirSync(STORAGE_DIR, { recursive: true });
+    storage = await import('../src/storage.js');
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    if (fs.existsSync(STORAGE_DIR)) {
+      fs.rmSync(STORAGE_DIR, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    ['monday', 7, 1],
+    ['tuesday', 1, 2],
+    ['wednesday', 2, 3],
+    ['thursday', 3, 4],
+    ['friday', 4, 5],
+    ['saturday', 5, 6],
+    ['sunday', 6, 0]
+  ])('parses %s to the upcoming occurrence', (day, expectedDiff, expectedDay) => {
+    const due = storage.parseDate(day);
+
+    expect(due).toBeDefined();
+    const dueDate = new Date(due);
+    expect(dueDate.getDay()).toBe(expectedDay);
+    expect(diffDaysFromNow(dueDate)).toBe(expectedDiff);
+  });
+
+  it('treats today as next week when matching weekday', () => {
+    const due = storage.parseDate('monday');
+    const dueDate = new Date(due);
+
+    expect(diffDaysFromNow(dueDate)).toBe(7);
+    expect(dueDate.getDay()).toBe(1);
+  });
+
+  it('accepts case-insensitive weekday input', () => {
+    const due = storage.parseDate('FrIdAy');
+    const dueDate = new Date(due);
+
+    expect(dueDate.getDay()).toBe(5);
+  });
+
+  it('trims whitespace around weekday input', () => {
+    const due = storage.parseDate('  thursday  ');
+    const dueDate = new Date(due);
+
+    expect(dueDate.getDay()).toBe(4);
   });
 });
 

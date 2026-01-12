@@ -51,7 +51,7 @@ Detect user intent and respond appropriately:
 | **Capture** | "Add this...", "Remind me...", "I had an idea..." | Fast capture, minimal questions, default to idea type |
 | **Review** | "What's on my plate?", "Daily review", "Show me..." | Stats + prioritized summary, grouped by type |
 | **Triage** | "Process my synap", "Process my brain dump", "What needs attention?" | Surface raw entries, help classify and prioritize |
-| **Focus** | "What should I work on?", "Priority items" | P1 todos + active projects, clear next actions |
+| **Focus** | "What should I work on?", "Priority items" | WIP items + P1 todos + active projects, clear next actions |
 | **Cleanup** | "Archive completed", "Clean up old stuff" | Bulk operations with preview and confirmation |
 
 ### Volume Modes (Quick vs Deep)
@@ -74,6 +74,8 @@ Detect user intent and respond appropriately:
 | Search | `synap search "keyword"` |
 | Show details | `synap show <id>` |
 | Mark done | `synap done <id>` |
+| Start working | `synap start <id>` |
+| Stop working | `synap stop <id>` |
 | Get stats | `synap stats` |
 | Setup wizard | `synap setup` |
 | Edit preferences | `synap preferences --edit` |
@@ -110,7 +112,7 @@ synap add --type project --title "Website Redesign" "Complete overhaul of the ma
 - `--priority <1|2|3>`: 1=high, 2=medium, 3=low
 - `--tags <tags>`: Comma-separated tags
 - `--parent <id>`: Parent entry ID
-- `--due <date>`: Due date (YYYY-MM-DD, 3d/1w, or keywords: today, tomorrow, next monday)
+- `--due <date>`: Due date (YYYY-MM-DD, 3d/1w, weekday names: monday/friday, or keywords: today, tomorrow, next monday)
 - `--json`: JSON output
 
 #### `synap todo <content>`
@@ -133,6 +135,18 @@ synap question "Should we migrate to TypeScript?"
 
 Options: `--priority`, `--tags`, `--parent`, `--due`, `--json`
 
+#### `synap log <id> <message>`
+Add a timestamped log entry under a parent entry.
+
+```bash
+synap log a1b2c3d4 "Started implementation"
+synap log a1b2c3d4 "Completed first draft" --inherit-tags
+```
+
+**Options**:
+- `--inherit-tags`: Copy tags from parent entry
+- `--json`: JSON output
+
 ### Query Commands
 
 #### `synap list`
@@ -154,7 +168,7 @@ synap list --json                       # JSON output for parsing
 
 **Options**:
 - `--type <type>`: Filter by entry type
-- `--status <status>`: raw, active, someday, done, archived (default: raw,active)
+- `--status <status>`: raw, active, wip, someday, done, archived (default: raw,active)
 - `--tags <tags>`: Comma-separated, AND logic
 - `--priority <1|2|3>`: Filter by priority
 - `--parent <id>`: Children of specific entry
@@ -238,6 +252,36 @@ synap done a1b2c3d4 b2c3d4e5 c3d4e5f6       # Multiple
 synap done --type todo --tags "sprint-1"     # By filter
 synap done --dry-run --type todo             # Preview first
 ```
+
+#### `synap start <ids...>`
+Start working on entries (mark as WIP).
+
+```bash
+synap start a1b2c3d4                         # Single entry
+synap start a1b2c3d4 b2c3d4e5                # Multiple
+synap start --type todo --tags urgent        # By filter
+synap start --dry-run --type todo            # Preview first
+```
+
+**Options**:
+- `-t, --type <type>`: Filter by type
+- `--tags <tags>`: Filter by tags
+- `--dry-run`: Show what would be started
+- `--json`: JSON output
+
+#### `synap stop <ids...>`
+Stop working on entries (remove WIP status).
+
+```bash
+synap stop a1b2c3d4                          # Single entry
+synap stop --all                             # Stop all WIP entries
+synap stop --dry-run                         # Preview first
+```
+
+**Options**:
+- `--all`: Stop all WIP entries
+- `--dry-run`: Show what would be stopped
+- `--json`: JSON output
 
 #### `synap archive <ids...>`
 Archive entries (hides from default view).
@@ -447,12 +491,13 @@ Critical for preventing accidental mass changes:
   "content": "The full text of the entry",
   "title": "Short title (optional)",
   "type": "idea|project|feature|todo|question|reference|note",
-  "status": "raw|active|someday|done|archived",
+  "status": "raw|active|wip|someday|done|archived",
   "priority": 1|2|3|null,
   "tags": ["tag1", "tag2"],
   "parent": "parent-id|null",
   "related": ["id1", "id2"],
   "due": "2026-01-10T23:59:59.000Z",
+  "startedAt": "2026-01-10T08:30:00.000Z",
   "createdAt": "2026-01-05T08:30:00.000Z",
   "updatedAt": "2026-01-05T08:30:00.000Z",
   "source": "cli|agent|import"

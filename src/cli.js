@@ -81,6 +81,17 @@ async function main() {
     return date.toLocaleDateString();
   };
 
+  const formatDuration = (ms) => {
+    const minutes = Math.floor(ms / (1000 * 60));
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `(${days}d ${hours % 24}h)`;
+    if (hours > 0) return `(${hours}h ${minutes % 60}m)`;
+    if (minutes > 0) return `(${minutes}m)`;
+    return '(<1m)';
+  };
+
   // ============================================
   // CAPTURE COMMANDS
   // ============================================
@@ -296,6 +307,67 @@ async function main() {
     .option('--due <date>', 'Due date (YYYY-MM-DD, 3d/1w, or keywords: today, tomorrow, next monday)')
     .option('--json', 'Output as JSON')
     .action(createTypeShorthand('reference', 'reference'));
+
+  program
+    .command('log <id> <message...>')
+    .description('Add a timestamped log entry under a parent')
+    .option('--inherit-tags', 'Copy tags from parent entry')
+    .option('--json', 'Output as JSON')
+    .action(async (id, messageParts, options) => {
+      const message = messageParts.join(' ');
+
+      const parent = await storage.getEntry(id);
+      if (!parent) {
+        if (options.json) {
+          console.log(JSON.stringify({ success: false, error: `Parent entry not found: ${id}`, code: 'ENTRY_NOT_FOUND' }));
+        } else {
+          console.error(chalk.red(`Parent entry not found: ${id}`));
+        }
+        process.exit(1);
+      }
+
+      const now = new Date();
+      const timestamp = now.toISOString().slice(0, 16).replace('T', ' ');
+      const content = `[${timestamp}] ${message}`;
+      const title = message.length <= 40 ? message : message.slice(0, 37) + '...';
+
+      let tags = [];
+      if (options.inheritTags && parent.tags && parent.tags.length > 0) {
+        tags = [...parent.tags];
+      }
+
+      try {
+        const entry = await storage.addEntry({
+          content,
+          title,
+          type: 'note',
+          tags,
+          parent: parent.id,
+          source: 'cli'
+        });
+
+        if (options.json) {
+          console.log(JSON.stringify({
+            success: true,
+            entry,
+            parent: { id: parent.id, title: parent.title || parent.content.slice(0, 40) }
+          }, null, 2));
+        } else {
+          const shortId = entry.id.slice(0, 8);
+          const parentShortId = parent.id.slice(0, 8);
+          console.log(chalk.green(`Logged ${shortId} under ${parentShortId}:`));
+          console.log(`  Parent: ${chalk.cyan(parent.title || parent.content.slice(0, 30))}`);
+          console.log(`  Log: ${message.slice(0, 60)}${message.length > 60 ? '...' : ''}`);
+        }
+      } catch (err) {
+        if (options.json) {
+          console.log(JSON.stringify({ success: false, error: err.message }));
+        } else {
+          console.error(chalk.red(err.message));
+        }
+        process.exit(1);
+      }
+    });
 
   // ============================================
   // QUERY COMMANDS
@@ -772,6 +844,126 @@ async function main() {
         console.log(JSON.stringify({ success: true, count: entries.length }));
       } else {
         console.log(chalk.green(`Marked ${entries.length} entries as done`));
+      }
+    });
+
+  program
+    .command('start [ids...]')
+    .description('Start working on entries (mark as WIP)')
+    .option('-t, --type <type>', 'Filter by type')
+    .option('--tags <tags>', 'Filter by tags')
+    .option('--dry-run', 'Show what would be started')
+    .option('--json', 'Output as JSON')
+    .action(async (ids, options) => {
+      let entries;
+
+      if (ids.length > 0) {
+        entries = await storage.getEntriesByIds(ids);
+      } else if (options.type || options.tags) {
+        const result = await storage.listEntries({
+          type: options.type,
+          tags: options.tags ? options.tags.split(',').map(t => t.trim()) : undefined,
+          status: 'raw,active',
+          limit: 1000
+        });
+        entries = result.entries;
+      } else {
+        console.error(chalk.red('Please provide entry IDs or filter options (--type, --tags)'));
+        process.exit(1);
+      }
+
+      entries = entries.filter(e => e.status !== 'wip');
+
+      if (entries.length === 0) {
+        if (options.json) {
+          console.log(JSON.stringify({ success: true, count: 0, entries: [] }));
+        } else {
+          console.log(chalk.gray('No entries to start (already WIP or not found)'));
+        }
+        return;
+      }
+
+      if (options.dryRun) {
+        if (options.json) {
+          console.log(JSON.stringify({ success: true, dryRun: true, count: entries.length, entries }));
+        } else {
+          console.log(chalk.yellow(`Would start ${entries.length} entries:`));
+          for (const entry of entries) {
+            console.log(`  ${entry.id.slice(0, 8)} (${entry.type}): ${entry.title || entry.content.slice(0, 40)}...`);
+          }
+        }
+        return;
+      }
+
+      const startedAt = new Date().toISOString();
+      const updatedEntries = [];
+      for (const entry of entries) {
+        const updated = await storage.updateEntry(entry.id, { status: 'wip', startedAt });
+        updatedEntries.push(updated);
+      }
+
+      if (options.json) {
+        console.log(JSON.stringify({ success: true, count: updatedEntries.length, entries: updatedEntries }));
+      } else {
+        console.log(chalk.green(`Started ${updatedEntries.length} entries (marked as WIP)`));
+        for (const entry of updatedEntries) {
+          console.log(`  ${chalk.blue(entry.id.slice(0, 8))} ${entry.title || entry.content.slice(0, 40)}`);
+        }
+      }
+    });
+
+  program
+    .command('stop [ids...]')
+    .description('Stop working on entries (remove WIP status)')
+    .option('--all', 'Stop all WIP entries')
+    .option('--dry-run', 'Show what would be stopped')
+    .option('--json', 'Output as JSON')
+    .action(async (ids, options) => {
+      let entries;
+
+      if (ids.length > 0) {
+        entries = await storage.getEntriesByIds(ids);
+        entries = entries.filter(e => e.status === 'wip');
+      } else if (options.all) {
+        const result = await storage.listEntries({ status: 'wip', limit: 1000 });
+        entries = result.entries;
+      } else {
+        console.error(chalk.red('Please provide entry IDs or use --all to stop all WIP entries'));
+        process.exit(1);
+      }
+
+      if (entries.length === 0) {
+        if (options.json) {
+          console.log(JSON.stringify({ success: true, count: 0, entries: [] }));
+        } else {
+          console.log(chalk.gray('No WIP entries to stop'));
+        }
+        return;
+      }
+
+      if (options.dryRun) {
+        if (options.json) {
+          console.log(JSON.stringify({ success: true, dryRun: true, count: entries.length, entries }));
+        } else {
+          console.log(chalk.yellow(`Would stop ${entries.length} WIP entries:`));
+          for (const entry of entries) {
+            const duration = entry.startedAt ? formatDuration(Date.now() - new Date(entry.startedAt).getTime()) : '';
+            console.log(`  ${entry.id.slice(0, 8)}: ${entry.title || entry.content.slice(0, 40)}... ${duration}`);
+          }
+        }
+        return;
+      }
+
+      const updatedEntries = [];
+      for (const entry of entries) {
+        const updated = await storage.updateEntry(entry.id, { status: 'active', startedAt: null });
+        updatedEntries.push(updated);
+      }
+
+      if (options.json) {
+        console.log(JSON.stringify({ success: true, count: updatedEntries.length, entries: updatedEntries }));
+      } else {
+        console.log(chalk.green(`Stopped ${updatedEntries.length} entries (marked as active)`));
       }
     });
 

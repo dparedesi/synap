@@ -15,7 +15,7 @@ const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
 // Valid types, statuses, and date formats
 const VALID_TYPES = ['idea', 'project', 'feature', 'todo', 'question', 'reference', 'note'];
-const VALID_STATUSES = ['raw', 'active', 'someday', 'done', 'archived'];
+const VALID_STATUSES = ['raw', 'active', 'wip', 'someday', 'done', 'archived'];
 const VALID_DATE_FORMATS = ['relative', 'absolute', 'locale'];
 
 /**
@@ -246,6 +246,26 @@ function parseDate(input) {
     const now = new Date();
     const current = now.getDay();
     let diff = (target + 7 - current) % 7;
+    if (diff === 0) diff = 7;
+    return endOfDay(new Date(now.getTime() + diff * dayMs)).toISOString();
+  }
+
+  // Bare weekday names (e.g., "monday", "friday")
+  const bareWeekdayMatch = lowered.match(/^(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/);
+  if (bareWeekdayMatch) {
+    const weekdays = {
+      sunday: 0,
+      monday: 1,
+      tuesday: 2,
+      wednesday: 3,
+      thursday: 4,
+      friday: 5,
+      saturday: 6
+    };
+    const target = weekdays[bareWeekdayMatch[1]];
+    const now = new Date();
+    const current = now.getDay();
+    let diff = (target - current + 7) % 7;
     if (diff === 0) diff = 7;
     return endOfDay(new Date(now.getTime() + diff * dayMs)).toISOString();
   }
@@ -654,6 +674,7 @@ async function updateEntry(id, updates) {
   if (updates.priority === null) delete entry.priority;
   if (updates.parent === null) delete entry.parent;
   if (updates.due === null) delete entry.due;
+  if (updates.startedAt === null) delete entry.startedAt;
 
   saveEntries(data);
 

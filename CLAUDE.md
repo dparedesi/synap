@@ -48,12 +48,13 @@ interface Entry {
   content: string;      // The thought
   title?: string;       // Auto-extracted from first line
   type: 'idea' | 'project' | 'feature' | 'todo' | 'question' | 'reference' | 'note';
-  status: 'raw' | 'active' | 'someday' | 'done' | 'archived';
+  status: 'raw' | 'active' | 'wip' | 'someday' | 'done' | 'archived';
   priority?: 1 | 2 | 3;
   tags: string[];
   parent?: string;
   related?: string[];
   due?: string;         // ISO date for due date
+  startedAt?: string;   // ISO date when work started (wip status)
   createdAt: string;
   updatedAt: string;
   source?: 'cli' | 'agent' | 'import';  // Origin of entry
@@ -78,6 +79,9 @@ interface Entry {
 | `synap edit <id>` | Edit content |
 | `synap set <id>` | Update metadata |
 | `synap done <id>` | Mark done |
+| `synap start <id>` | Start working (mark as WIP) |
+| `synap stop <id>` | Stop working (remove WIP) |
+| `synap log <id> <msg>` | Add timestamped log entry under parent |
 | `synap archive <id>` | Archive |
 | `synap delete <id>` | Delete (logged) |
 | `synap restore` | Restore deleted |
@@ -96,7 +100,7 @@ interface Entry {
 | `synap export` | Export entries (--file, --format, --type, --status) |
 | `synap import <file>` | Import entries (--merge, --skip-existing, --dry-run) |
 
-Capture commands accept `--due` (YYYY-MM-DD, 3d/1w, or keywords: today, tomorrow, next monday).
+Capture commands accept `--due` (YYYY-MM-DD, 3d/1w, weekday names: monday/friday, or keywords: today, tomorrow, next monday).
 
 ### Enhanced Filters (v0.3.0)
 
