@@ -202,6 +202,89 @@ function parseDuration(duration) {
 }
 
 /**
+ * Parse date input to ISO string
+ * Supports: ISO dates ("2025-01-15"), relative ("3d", "1w"), natural language ("tomorrow", "next Monday")
+ * @param {string} input - Date input string
+ * @returns {string|null} - ISO date string or null if invalid
+ */
+function parseDate(input) {
+  if (typeof input !== 'string') return null;
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  const lowered = trimmed.toLowerCase();
+  const dayMs = 24 * 60 * 60 * 1000;
+
+  const endOfDay = (date) => {
+    const next = new Date(date);
+    next.setHours(23, 59, 59, 999);
+    return next;
+  };
+
+  if (lowered === 'today') {
+    return endOfDay(new Date()).toISOString();
+  }
+  if (lowered === 'tomorrow') {
+    return endOfDay(new Date(Date.now() + dayMs)).toISOString();
+  }
+  if (lowered === 'yesterday') {
+    return endOfDay(new Date(Date.now() - dayMs)).toISOString();
+  }
+
+  const nextWeekdayMatch = lowered.match(/^next\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/);
+  if (nextWeekdayMatch) {
+    const weekdays = {
+      sunday: 0,
+      monday: 1,
+      tuesday: 2,
+      wednesday: 3,
+      thursday: 4,
+      friday: 5,
+      saturday: 6
+    };
+    const target = weekdays[nextWeekdayMatch[1]];
+    const now = new Date();
+    const current = now.getDay();
+    let diff = (target + 7 - current) % 7;
+    if (diff === 0) diff = 7;
+    return endOfDay(new Date(now.getTime() + diff * dayMs)).toISOString();
+  }
+
+  const inMatch = lowered.match(/^in\s+(\d+)\s*(hour|hours|day|days|week|weeks|month|months)$/);
+  if (inMatch) {
+    const value = parseInt(inMatch[1], 10);
+    const unit = inMatch[2];
+    const multipliers = {
+      hour: 60 * 60 * 1000,
+      hours: 60 * 60 * 1000,
+      day: dayMs,
+      days: dayMs,
+      week: 7 * dayMs,
+      weeks: 7 * dayMs,
+      month: 30 * dayMs,
+      months: 30 * dayMs
+    };
+    return new Date(Date.now() + value * multipliers[unit]).toISOString();
+  }
+
+  // Try relative duration first (3d, 1w, etc.) - for FUTURE dates
+  const durationMs = parseDuration(trimmed);
+  if (durationMs !== null) {
+    return new Date(Date.now() + durationMs).toISOString();
+  }
+
+  // Try ISO date (YYYY-MM-DD)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    const date = new Date(trimmed + 'T23:59:59');
+    if (!isNaN(date.getTime())) {
+      return date.toISOString();
+    }
+  }
+
+  return null;
+}
+
+/**
  * Add a new entry
  */
 async function addEntry(options) {
@@ -216,6 +299,16 @@ async function addEntry(options) {
     }
   }
 
+  // Parse due date if provided
+  let dueDate = undefined;
+  const dueInput = typeof options.due === 'string' ? options.due.trim() : options.due;
+  if (dueInput) {
+    dueDate = parseDate(dueInput);
+    if (!dueDate) {
+      throw new Error(`Invalid due date: ${options.due}`);
+    }
+  }
+
   const now = new Date().toISOString();
   const entry = {
     id: uuidv4(),
@@ -227,6 +320,7 @@ async function addEntry(options) {
     tags: options.tags || [],
     parent: parentId || undefined,
     related: [],
+    due: dueDate,
     createdAt: now,
     updatedAt: now,
     source: options.source || 'cli'
@@ -392,6 +486,40 @@ async function listEntries(query = {}) {
     });
   }
 
+  // Filter by due before
+  if (query.dueBefore) {
+    const cutoffDate = parseDate(query.dueBefore);
+    if (cutoffDate) {
+      entries = entries.filter(e => e.due && new Date(e.due) <= new Date(cutoffDate));
+    }
+  }
+
+  // Filter by due after
+  if (query.dueAfter) {
+    const cutoffDate = parseDate(query.dueAfter);
+    if (cutoffDate) {
+      entries = entries.filter(e => e.due && new Date(e.due) >= new Date(cutoffDate));
+    }
+  }
+
+  // Filter overdue (due before now, not done/archived)
+  if (query.overdue) {
+    const now = new Date();
+    entries = entries.filter(e =>
+      e.due &&
+      new Date(e.due) < now &&
+      e.status !== 'done' &&
+      e.status !== 'archived'
+    );
+  }
+
+  // Filter entries with/without due date
+  if (query.hasDue === true) {
+    entries = entries.filter(e => e.due);
+  } else if (query.hasDue === false) {
+    entries = entries.filter(e => !e.due);
+  }
+
   // Include done if requested
   if (!query.includeDone && query.status !== 'done') {
     entries = entries.filter(e => e.status !== 'done');
@@ -400,6 +528,13 @@ async function listEntries(query = {}) {
   // Sort
   const sortField = query.sort || 'created';
   entries.sort((a, b) => {
+    if (sortField === 'due') {
+      // Entries without due dates go to the end
+      if (!a.due && !b.due) return 0;
+      if (!a.due) return 1;
+      if (!b.due) return -1;
+      return new Date(a.due) - new Date(b.due);
+    }
     if (sortField === 'priority') {
       const pA = a.priority || 99;
       const pB = b.priority || 99;
@@ -518,6 +653,7 @@ async function updateEntry(id, updates) {
   // Handle null values (clear fields)
   if (updates.priority === null) delete entry.priority;
   if (updates.parent === null) delete entry.parent;
+  if (updates.due === null) delete entry.due;
 
   saveEntries(data);
 
@@ -794,6 +930,7 @@ module.exports = {
   getDefaultConfig,
   validateConfigValue,
   saveConfig,
+  parseDate,
   CONFIG_DIR,
   ENTRIES_FILE,
   ARCHIVE_FILE,

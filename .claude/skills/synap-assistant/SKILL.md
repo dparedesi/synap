@@ -67,6 +67,7 @@ Detect user intent and respond appropriately:
 |------|---------|
 | Capture idea | `synap add "your thought here"` |
 | Add todo | `synap todo "task description"` |
+| Add todo with due date | `synap todo "Review PR #42" --due tomorrow` |
 | Add question | `synap question "what you're wondering"` |
 | List active | `synap list` |
 | See all | `synap list --all` |
@@ -98,6 +99,7 @@ Quick capture of a thought.
 ```bash
 synap add "What if we used a graph database?"
 synap add "Need to review the API design" --type todo --priority 1
+synap add "Prep for demo" --type todo --due 2025-02-15
 synap add "Meeting notes from standup" --type note --tags "meetings,weekly"
 synap add --type project --title "Website Redesign" "Complete overhaul of the marketing site..."
 ```
@@ -108,6 +110,7 @@ synap add --type project --title "Website Redesign" "Complete overhaul of the ma
 - `--priority <1|2|3>`: 1=high, 2=medium, 3=low
 - `--tags <tags>`: Comma-separated tags
 - `--parent <id>`: Parent entry ID
+- `--due <date>`: Due date (YYYY-MM-DD, 3d/1w, or keywords: today, tomorrow, next monday)
 - `--json`: JSON output
 
 #### `synap todo <content>`
@@ -118,6 +121,8 @@ synap todo "Review PR #42"
 # Equivalent to: synap add "Review PR #42" --type todo
 ```
 
+Options: `--priority`, `--tags`, `--parent`, `--due`, `--json`
+
 #### `synap question <content>`
 Shorthand for adding a question.
 
@@ -125,6 +130,8 @@ Shorthand for adding a question.
 synap question "Should we migrate to TypeScript?"
 # Equivalent to: synap add "..." --type question
 ```
+
+Options: `--priority`, `--tags`, `--parent`, `--due`, `--json`
 
 ### Query Commands
 
@@ -139,6 +146,9 @@ synap list --status raw                 # Needs triage
 synap list --priority 1                 # High priority only
 synap list --tags work,urgent           # Has ALL specified tags
 synap list --since 7d                   # Created in last 7 days
+synap list --overdue                    # Overdue entries
+synap list --due-before 7d              # Due in next 7 days
+synap list --has-due                    # Entries with due dates
 synap list --json                       # JSON output for parsing
 ```
 
@@ -150,11 +160,16 @@ synap list --json                       # JSON output for parsing
 - `--parent <id>`: Children of specific entry
 - `--orphans`: Only entries without parent
 - `--since <duration>`: e.g., 7d, 24h, 2w
+- `--due-before <date>`: Due before date (YYYY-MM-DD or 3d/1w)
+- `--due-after <date>`: Due after date (YYYY-MM-DD or 3d/1w)
+- `--overdue`: Only overdue entries
+- `--has-due`: Only entries with due dates
+- `--no-due`: Only entries without due dates
 - `--all`: All statuses except archived
 - `--done`: Include done entries
 - `--archived`: Show only archived
 - `--limit <n>`: Max entries (default: 50)
-- `--sort <field>`: created, updated, priority
+- `--sort <field>`: created, updated, priority, due
 - `--reverse`: Reverse sort order
 - `--json`: JSON output
 
@@ -437,6 +452,7 @@ Critical for preventing accidental mass changes:
   "tags": ["tag1", "tag2"],
   "parent": "parent-id|null",
   "related": ["id1", "id2"],
+  "due": "2026-01-10T23:59:59.000Z",
   "createdAt": "2026-01-05T08:30:00.000Z",
   "updatedAt": "2026-01-05T08:30:00.000Z",
   "source": "cli|agent|import"

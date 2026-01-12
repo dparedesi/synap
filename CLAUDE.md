@@ -53,6 +53,7 @@ interface Entry {
   tags: string[];
   parent?: string;
   related?: string[];
+  due?: string;         // ISO date for due date
   createdAt: string;
   updatedAt: string;
   source?: 'cli' | 'agent' | 'import';  // Origin of entry
@@ -95,6 +96,8 @@ interface Entry {
 | `synap export` | Export entries (--file, --format, --type, --status) |
 | `synap import <file>` | Import entries (--merge, --skip-existing, --dry-run) |
 
+Capture commands accept `--due` (YYYY-MM-DD, 3d/1w, or keywords: today, tomorrow, next monday).
+
 ### Enhanced Filters (v0.3.0)
 
 ```bash
@@ -103,6 +106,11 @@ synap list --not-type reference       # Exclude type
 synap list --not-tags archived        # Exclude entries with tag
 synap list --before 7d                # Entries older than 7 days
 synap list --between 2025-01-01,2025-01-31  # Date range
+synap list --due-before 2025-01-15    # Due before date
+synap list --due-after 7d             # Due after relative date
+synap list --overdue                  # Overdue entries
+synap list --has-due                  # Only entries with due dates
+synap list --no-due                   # Only entries without due dates
 ```
 
 ## Testing

@@ -63,6 +63,24 @@ async function main() {
     return date.toLocaleString();
   };
 
+  // Helper: Format due date for display
+  const formatDueDate = (dateStr) => {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return 'invalid date';
+
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfDue = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const diffDays = Math.round((startOfDue - startOfToday) / (24 * 60 * 60 * 1000));
+
+    if (diffDays === 0) return 'today';
+    if (diffDays === 1) return 'tomorrow';
+    if (diffDays === -1) return 'yesterday';
+    if (diffDays > 1 && diffDays <= 7) return `in ${diffDays} days`;
+    if (diffDays < -1 && diffDays >= -7) return `${Math.abs(diffDays)} days ago`;
+    return date.toLocaleDateString();
+  };
+
   // ============================================
   // CAPTURE COMMANDS
   // ============================================
@@ -75,27 +93,39 @@ async function main() {
     .option('-p, --priority <priority>', 'Priority level (1=high, 2=medium, 3=low)')
     .option('--tags <tags>', 'Comma-separated tags')
     .option('--parent <id>', 'Parent entry ID')
+    .option('--due <date>', 'Due date (YYYY-MM-DD, 3d/1w, or keywords: today, tomorrow, next monday)')
     .option('--json', 'Output as JSON')
     .action(async (contentParts, options) => {
       const content = contentParts.join(' ');
       const tags = mergeTags(options.tags);
 
-      const entry = await storage.addEntry({
-        content,
-        title: options.title,
-        type: options.type,
-        priority: options.priority ? parseInt(options.priority, 10) : undefined,
-        tags,
-        parent: options.parent,
-        source: 'cli'
-      });
+      try {
+        const entry = await storage.addEntry({
+          content,
+          title: options.title,
+          type: options.type,
+          priority: options.priority ? parseInt(options.priority, 10) : undefined,
+          tags,
+          parent: options.parent,
+          due: options.due,
+          source: 'cli'
+        });
 
-      if (options.json) {
-        console.log(JSON.stringify({ success: true, entry }, null, 2));
-      } else {
-        const shortId = entry.id.slice(0, 8);
-        const priorityBadge = entry.priority ? chalk.yellow(`[P${entry.priority}] `) : '';
-        console.log(chalk.green(`Added ${entry.type} ${shortId}: `) + priorityBadge + `"${content.slice(0, 50)}${content.length > 50 ? '...' : ''}"`);
+        if (options.json) {
+          console.log(JSON.stringify({ success: true, entry }, null, 2));
+        } else {
+          const shortId = entry.id.slice(0, 8);
+          const priorityBadge = entry.priority ? chalk.yellow(`[P${entry.priority}] `) : '';
+          const dueBadge = entry.due ? chalk.magenta(` [due: ${formatDueDate(entry.due)}]`) : '';
+          console.log(chalk.green(`Added ${entry.type} ${shortId}: `) + priorityBadge + `"${content.slice(0, 50)}${content.length > 50 ? '...' : ''}"` + dueBadge);
+        }
+      } catch (err) {
+        if (options.json) {
+          console.log(JSON.stringify({ success: false, error: err.message, code: 'INVALID_DUE_DATE' }));
+        } else {
+          console.error(chalk.red(err.message));
+        }
+        process.exit(1);
       }
     });
 
@@ -105,26 +135,38 @@ async function main() {
     .option('-p, --priority <priority>', 'Priority level (1=high, 2=medium, 3=low)')
     .option('--tags <tags>', 'Comma-separated tags')
     .option('--parent <id>', 'Parent entry ID')
+    .option('--due <date>', 'Due date (YYYY-MM-DD, 3d/1w, or keywords: today, tomorrow, next monday)')
     .option('--json', 'Output as JSON')
     .action(async (contentParts, options) => {
       const content = contentParts.join(' ');
       const tags = mergeTags(options.tags);
 
-      const entry = await storage.addEntry({
-        content,
-        type: 'todo',
-        priority: options.priority ? parseInt(options.priority, 10) : undefined,
-        tags,
-        parent: options.parent,
-        source: 'cli'
-      });
+      try {
+        const entry = await storage.addEntry({
+          content,
+          type: 'todo',
+          priority: options.priority ? parseInt(options.priority, 10) : undefined,
+          tags,
+          parent: options.parent,
+          due: options.due,
+          source: 'cli'
+        });
 
-      if (options.json) {
-        console.log(JSON.stringify({ success: true, entry }, null, 2));
-      } else {
-        const shortId = entry.id.slice(0, 8);
-        const priorityBadge = entry.priority ? chalk.yellow(`[P${entry.priority}] `) : '';
-        console.log(chalk.green(`Added todo ${shortId}: `) + priorityBadge + `"${content.slice(0, 50)}${content.length > 50 ? '...' : ''}"`);
+        if (options.json) {
+          console.log(JSON.stringify({ success: true, entry }, null, 2));
+        } else {
+          const shortId = entry.id.slice(0, 8);
+          const priorityBadge = entry.priority ? chalk.yellow(`[P${entry.priority}] `) : '';
+          const dueBadge = entry.due ? chalk.magenta(` [due: ${formatDueDate(entry.due)}]`) : '';
+          console.log(chalk.green(`Added todo ${shortId}: `) + priorityBadge + `"${content.slice(0, 50)}${content.length > 50 ? '...' : ''}"` + dueBadge);
+        }
+      } catch (err) {
+        if (options.json) {
+          console.log(JSON.stringify({ success: false, error: err.message, code: 'INVALID_DUE_DATE' }));
+        } else {
+          console.error(chalk.red(err.message));
+        }
+        process.exit(1);
       }
     });
 
@@ -134,26 +176,38 @@ async function main() {
     .option('-p, --priority <priority>', 'Priority level (1=high, 2=medium, 3=low)')
     .option('--tags <tags>', 'Comma-separated tags')
     .option('--parent <id>', 'Parent entry ID')
+    .option('--due <date>', 'Due date (YYYY-MM-DD, 3d/1w, or keywords: today, tomorrow, next monday)')
     .option('--json', 'Output as JSON')
     .action(async (contentParts, options) => {
       const content = contentParts.join(' ');
       const tags = mergeTags(options.tags);
 
-      const entry = await storage.addEntry({
-        content,
-        type: 'question',
-        priority: options.priority ? parseInt(options.priority, 10) : undefined,
-        tags,
-        parent: options.parent,
-        source: 'cli'
-      });
+      try {
+        const entry = await storage.addEntry({
+          content,
+          type: 'question',
+          priority: options.priority ? parseInt(options.priority, 10) : undefined,
+          tags,
+          parent: options.parent,
+          due: options.due,
+          source: 'cli'
+        });
 
-      if (options.json) {
-        console.log(JSON.stringify({ success: true, entry }, null, 2));
-      } else {
-        const shortId = entry.id.slice(0, 8);
-        const priorityBadge = entry.priority ? chalk.yellow(`[P${entry.priority}] `) : '';
-        console.log(chalk.green(`Added question ${shortId}: `) + priorityBadge + `"${content.slice(0, 50)}${content.length > 50 ? '...' : ''}"`);
+        if (options.json) {
+          console.log(JSON.stringify({ success: true, entry }, null, 2));
+        } else {
+          const shortId = entry.id.slice(0, 8);
+          const priorityBadge = entry.priority ? chalk.yellow(`[P${entry.priority}] `) : '';
+          const dueBadge = entry.due ? chalk.magenta(` [due: ${formatDueDate(entry.due)}]`) : '';
+          console.log(chalk.green(`Added question ${shortId}: `) + priorityBadge + `"${content.slice(0, 50)}${content.length > 50 ? '...' : ''}"` + dueBadge);
+        }
+      } catch (err) {
+        if (options.json) {
+          console.log(JSON.stringify({ success: false, error: err.message, code: 'INVALID_DUE_DATE' }));
+        } else {
+          console.error(chalk.red(err.message));
+        }
+        process.exit(1);
       }
     });
 
@@ -163,21 +217,32 @@ async function main() {
       const content = contentParts.join(' ');
       const tags = mergeTags(options.tags);
 
-      const entry = await storage.addEntry({
-        content,
-        type: typeName,
-        priority: options.priority ? parseInt(options.priority, 10) : undefined,
-        tags,
-        parent: options.parent,
-        source: 'cli'
-      });
+      try {
+        const entry = await storage.addEntry({
+          content,
+          type: typeName,
+          priority: options.priority ? parseInt(options.priority, 10) : undefined,
+          tags,
+          parent: options.parent,
+          due: options.due,
+          source: 'cli'
+        });
 
-      if (options.json) {
-        console.log(JSON.stringify({ success: true, entry }, null, 2));
-      } else {
-        const shortId = entry.id.slice(0, 8);
-        const priorityBadge = entry.priority ? chalk.yellow(`[P${entry.priority}] `) : '';
-        console.log(chalk.green(`Added ${displayName} ${shortId}: `) + priorityBadge + `"${content.slice(0, 50)}${content.length > 50 ? '...' : ''}"`);
+        if (options.json) {
+          console.log(JSON.stringify({ success: true, entry }, null, 2));
+        } else {
+          const shortId = entry.id.slice(0, 8);
+          const priorityBadge = entry.priority ? chalk.yellow(`[P${entry.priority}] `) : '';
+          const dueBadge = entry.due ? chalk.magenta(` [due: ${formatDueDate(entry.due)}]`) : '';
+          console.log(chalk.green(`Added ${displayName} ${shortId}: `) + priorityBadge + `"${content.slice(0, 50)}${content.length > 50 ? '...' : ''}"` + dueBadge);
+        }
+      } catch (err) {
+        if (options.json) {
+          console.log(JSON.stringify({ success: false, error: err.message, code: 'INVALID_DUE_DATE' }));
+        } else {
+          console.error(chalk.red(err.message));
+        }
+        process.exit(1);
       }
     };
   };
@@ -188,6 +253,7 @@ async function main() {
     .option('-p, --priority <priority>', 'Priority level (1=high, 2=medium, 3=low)')
     .option('--tags <tags>', 'Comma-separated tags')
     .option('--parent <id>', 'Parent entry ID')
+    .option('--due <date>', 'Due date (YYYY-MM-DD, 3d/1w, or keywords: today, tomorrow, next monday)')
     .option('--json', 'Output as JSON')
     .action(createTypeShorthand('idea'));
 
@@ -197,6 +263,7 @@ async function main() {
     .option('-p, --priority <priority>', 'Priority level (1=high, 2=medium, 3=low)')
     .option('--tags <tags>', 'Comma-separated tags')
     .option('--parent <id>', 'Parent entry ID')
+    .option('--due <date>', 'Due date (YYYY-MM-DD, 3d/1w, or keywords: today, tomorrow, next monday)')
     .option('--json', 'Output as JSON')
     .action(createTypeShorthand('project'));
 
@@ -206,6 +273,7 @@ async function main() {
     .option('-p, --priority <priority>', 'Priority level (1=high, 2=medium, 3=low)')
     .option('--tags <tags>', 'Comma-separated tags')
     .option('--parent <id>', 'Parent entry ID')
+    .option('--due <date>', 'Due date (YYYY-MM-DD, 3d/1w, or keywords: today, tomorrow, next monday)')
     .option('--json', 'Output as JSON')
     .action(createTypeShorthand('feature'));
 
@@ -215,6 +283,7 @@ async function main() {
     .option('-p, --priority <priority>', 'Priority level (1=high, 2=medium, 3=low)')
     .option('--tags <tags>', 'Comma-separated tags')
     .option('--parent <id>', 'Parent entry ID')
+    .option('--due <date>', 'Due date (YYYY-MM-DD, 3d/1w, or keywords: today, tomorrow, next monday)')
     .option('--json', 'Output as JSON')
     .action(createTypeShorthand('note'));
 
@@ -224,6 +293,7 @@ async function main() {
     .option('-p, --priority <priority>', 'Priority level (1=high, 2=medium, 3=low)')
     .option('--tags <tags>', 'Comma-separated tags')
     .option('--parent <id>', 'Parent entry ID')
+    .option('--due <date>', 'Due date (YYYY-MM-DD, 3d/1w, or keywords: today, tomorrow, next monday)')
     .option('--json', 'Output as JSON')
     .action(createTypeShorthand('reference', 'reference'));
 
@@ -246,11 +316,16 @@ async function main() {
     .option('--since <duration>', 'Created after (e.g., 7d, 24h)')
     .option('--before <duration>', 'Created before (e.g., 7d, 24h)')
     .option('--between <range>', 'Date range: start,end (e.g., 2025-01-01,2025-01-31)')
+    .option('--due-before <date>', 'Due before date (YYYY-MM-DD or 3d/1w)')
+    .option('--due-after <date>', 'Due after date (YYYY-MM-DD or 3d/1w)')
+    .option('--overdue', 'Only overdue entries')
+    .option('--has-due', 'Only entries with due dates')
+    .option('--no-due', 'Only entries without due dates')
     .option('-a, --all', 'Include all statuses except archived')
     .option('--done', 'Include done entries')
     .option('--archived', 'Show only archived entries')
     .option('-n, --limit <n>', 'Max entries to return', '50')
-    .option('--sort <field>', 'Sort by: created, updated, priority', 'created')
+    .option('--sort <field>', 'Sort by: created, updated, priority, due', 'created')
     .option('--reverse', 'Reverse sort order')
     .option('--json', 'Output as JSON')
     .action(async (options) => {
@@ -271,6 +346,10 @@ async function main() {
           const [start, end] = options.between.split(',');
           return { start: start.trim(), end: end.trim() };
         })() : undefined,
+        dueBefore: options.dueBefore,
+        dueAfter: options.dueAfter,
+        overdue: options.overdue,
+        hasDue: options.hasDue ? true : (options.due === false ? false : undefined),
         includeDone: options.done || options.all,
         limit: parseInt(options.limit, 10),
         sort: options.sort,
@@ -314,7 +393,13 @@ async function main() {
             const title = entry.title || entry.content.slice(0, 40);
             const truncated = title.length > 40 ? '...' : '';
             const timeStr = chalk.gray(formatTime(entry.createdAt));
-            console.log(`  ${chalk.blue(shortId)}  ${priorityBadge} ${title}${truncated}${tags} ${timeStr}`);
+            let dueStr = '';
+            if (entry.due) {
+              const isOverdue = new Date(entry.due) < new Date() && entry.status !== 'done';
+              const dueText = formatDueDate(entry.due);
+              dueStr = isOverdue ? chalk.red(` [OVERDUE: ${dueText}]`) : chalk.magenta(` [due: ${dueText}]`);
+            }
+            console.log(`  ${chalk.blue(shortId)}  ${priorityBadge} ${title}${truncated}${tags}${dueStr} ${timeStr}`);
           }
           console.log('');
         }
@@ -374,6 +459,12 @@ async function main() {
 
         console.log(`  ${chalk.gray('Created:')}  ${formatTime(entry.createdAt)}`);
         console.log(`  ${chalk.gray('Updated:')}  ${formatTime(entry.updatedAt)}`);
+        if (entry.due) {
+          const isOverdue = new Date(entry.due) < new Date() && entry.status !== 'done';
+          const dueColor = isOverdue ? chalk.red : chalk.magenta;
+          const overdueLabel = isOverdue ? ' (OVERDUE)' : '';
+          console.log(`  ${chalk.gray('Due:')}      ${dueColor(formatDueDate(entry.due))}${overdueLabel}`);
+        }
         if (entry.source) {
           console.log(`  ${chalk.gray('Source:')}   ${entry.source}`);
         }
@@ -517,6 +608,8 @@ async function main() {
     .option('--remove-tags <tags>', 'Remove tags')
     .option('--parent <id>', 'Set parent')
     .option('--clear-parent', 'Remove parent')
+    .option('--due <date>', 'Set due date')
+    .option('--clear-due', 'Remove due date')
     .option('--json', 'Output as JSON')
     .action(async (id, options) => {
       const entry = await storage.getEntry(id);
@@ -546,6 +639,19 @@ async function main() {
       }
       if (options.parent) updates.parent = options.parent;
       if (options.clearParent) updates.parent = null;
+      if (options.due) {
+        const dueDate = storage.parseDate(options.due);
+        if (!dueDate) {
+          if (options.json) {
+            console.log(JSON.stringify({ success: false, error: `Invalid due date: ${options.due}`, code: 'INVALID_DUE_DATE' }));
+          } else {
+            console.error(chalk.red(`Invalid due date: ${options.due}`));
+          }
+          process.exit(1);
+        }
+        updates.due = dueDate;
+      }
+      if (options.clearDue) updates.due = null;
 
       const updated = await storage.updateEntry(entry.id, updates);
 
@@ -1043,7 +1149,7 @@ async function main() {
 
   program
     .command('focus')
-    .description('Show what to work on now: P1 todos + active projects')
+    .description('Show what to work on now: P1 todos + overdue + active projects')
     .option('--json', 'Output as JSON')
     .action(async (options) => {
       // Get P1 todos
@@ -1053,6 +1159,17 @@ async function main() {
         status: 'raw,active',
         limit: 100
       });
+
+      // Get overdue entries
+      const overdueEntries = await storage.listEntries({
+        overdue: true,
+        status: 'raw,active',
+        limit: 100
+      });
+
+      // Deduplicate (some P1 todos may also be overdue)
+      const p1TodoIds = new Set(p1Todos.entries.map(e => e.id));
+      const overdueNotP1 = overdueEntries.entries.filter(e => !p1TodoIds.has(e.id));
 
       // Get active projects with progress
       const projects = await storage.listEntries({
@@ -1075,10 +1192,23 @@ async function main() {
         console.log(JSON.stringify({
           success: true,
           p1Todos: p1Todos.entries,
+          overdueItems: overdueNotP1,
           activeProjects: projectsWithProgress
         }, null, 2));
       } else {
         console.log(chalk.bold('Focus: What to work on now\n'));
+
+        // Overdue section (show first - most urgent)
+        if (overdueNotP1.length > 0) {
+          console.log(chalk.red.bold('Overdue:'));
+          for (const item of overdueNotP1) {
+            const shortId = item.id.slice(0, 8);
+            const title = item.title || item.content.slice(0, 50);
+            const dueStr = formatDueDate(item.due);
+            console.log(`  ${chalk.blue(shortId)} ${title} ${chalk.red(`[${dueStr}]`)}`);
+          }
+          console.log();
+        }
 
         // P1 Todos
         if (p1Todos.entries.length > 0) {
@@ -1086,7 +1216,8 @@ async function main() {
           for (const todo of p1Todos.entries) {
             const shortId = todo.id.slice(0, 8);
             const title = todo.title || todo.content.slice(0, 50);
-            console.log(`  ${chalk.blue(shortId)} ${title}`);
+            const dueStr = todo.due ? chalk.magenta(` [due: ${formatDueDate(todo.due)}]`) : '';
+            console.log(`  ${chalk.blue(shortId)} ${title}${dueStr}`);
           }
           console.log();
         } else {
