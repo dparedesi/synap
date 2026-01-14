@@ -132,3 +132,13 @@ npm run test:run   # Run tests once
 node src/cli.js <command>  # Run CLI locally
 npm link                   # Link for global use
 ```
+
+## Publishing
+
+**Do not run `npm publish` directly** — publishing is handled by GitHub Actions on release.
+
+To release a new version:
+1. Bump version in `package.json`
+2. Commit and push to main
+3. Create a GitHub release: `gh release create vX.Y.Z --title "vX.Y.Z" --notes "..."`
+4. The `publish.yml` workflow will automatically publish to npm
