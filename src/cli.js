@@ -1835,10 +1835,11 @@ async function main() {
             skillResult = { ...skillResult, ...(await skillInstaller.install()) };
             if (skillResult.installed) {
               console.log(`      ${chalk.green('✓')} Skill installed at ~/.claude/skills/synap-assistant/`);
+              if (skillResult.backupFile) {
+                console.log(`      ${chalk.yellow('•')} Your modifications backed up to ${skillResult.backupFile}`);
+              }
             } else if (skillResult.skipped) {
               console.log(`      ${chalk.yellow('•')} Skill already up to date`);
-            } else if (skillResult.needsForce) {
-              console.log(`      ${chalk.yellow('•')} Skill modified. Use ${chalk.cyan('synap install-skill --force')}`);
             }
           } catch (err) {
             console.log(`      ${chalk.red('✗')} Skill install failed: ${err.message}`);
@@ -2040,7 +2041,6 @@ async function main() {
     .command('install-skill')
     .description('Install Claude Code skill')
     .option('--uninstall', 'Remove the skill')
-    .option('--force', 'Override ownership check')
     .action(async (options) => {
       const skillInstaller = require('./skill-installer');
 
@@ -2048,13 +2048,14 @@ async function main() {
         await skillInstaller.uninstall();
         console.log(chalk.green('Skill uninstalled'));
       } else {
-        const result = await skillInstaller.install({ force: options.force });
+        const result = await skillInstaller.install();
         if (result.installed) {
           console.log(chalk.green('Skill installed to ~/.claude/skills/synap-assistant/'));
+          if (result.backupFile) {
+            console.log(chalk.yellow(`Your modifications were backed up to ${result.backupFile}`));
+          }
         } else if (result.skipped) {
           console.log(chalk.yellow('Skill already up to date'));
-        } else if (result.needsForce) {
-          console.log(chalk.yellow('Skill was modified by user. Use --force to overwrite.'));
         }
       }
     });

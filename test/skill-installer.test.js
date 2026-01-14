@@ -55,27 +55,28 @@ describe('skill installer', () => {
     expect(result.skipped).toBe(true);
   });
 
-  it('requires force when target is modified', async () => {
+  it('auto-installs and backs up when target is modified', async () => {
     await skillInstaller.install();
     fs.appendFileSync(TARGET_SKILL_FILE, '\n<!-- user note -->\n', 'utf8');
 
     const result = await skillInstaller.install();
 
-    expect(result.needsForce).toBe(true);
+    expect(result.installed).toBe(true);
+    expect(result.backupFile).toBeTruthy();
+    expect(fs.existsSync(result.backupFile)).toBe(true);
+    const backupContent = fs.readFileSync(result.backupFile, 'utf8');
+    expect(backupContent).toContain('user note');
+    // New content should not have user note
     const content = fs.readFileSync(TARGET_SKILL_FILE, 'utf8');
-    expect(content).toContain('user note');
+    expect(content).not.toContain('user note');
   });
 
-  it('overwrites with force and creates backup', async () => {
+  it('creates timestamped backup filename', async () => {
     await skillInstaller.install();
     fs.appendFileSync(TARGET_SKILL_FILE, '\n<!-- user note -->\n', 'utf8');
 
-    const result = await skillInstaller.install({ force: true });
+    const result = await skillInstaller.install();
 
-    expect(result.installed).toBe(true);
-    const backupFile = `${TARGET_SKILL_FILE}.backup`;
-    expect(fs.existsSync(backupFile)).toBe(true);
-    const backupContent = fs.readFileSync(backupFile, 'utf8');
-    expect(backupContent).toContain('user note');
+    expect(result.backupFile).toMatch(/SKILL\.md\.backup\.\d{8}/);
   });
 });

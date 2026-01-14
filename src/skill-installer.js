@@ -116,6 +116,8 @@ async function install(options = {}) {
     fs.mkdirSync(TARGET_SKILL_DIR, { recursive: true });
   }
 
+  let backupFile = null;
+
   // Check if target exists
   if (fs.existsSync(TARGET_SKILL_FILE)) {
     const targetContent = fs.readFileSync(TARGET_SKILL_FILE, 'utf8');
@@ -124,32 +126,33 @@ async function install(options = {}) {
     const canonicalTargetHash = getHash(canonicalTarget);
     const targetMatchesSource = canonicalTargetHash === sourceHash;
 
-    if (targetSource !== SKILL_SOURCE && !options.force) {
-      return { installed: false, needsForce: true };
+    // Already up to date
+    if (targetMatchesSource && targetContent === normalizedSourceContent) {
+      return { installed: false, skipped: true };
     }
 
-    if (targetSource === SKILL_SOURCE && !options.force) {
-      if (targetMatchesSource && targetContent === normalizedSourceContent) {
-        return { installed: false, skipped: true };
-      }
+    // Check if user modified the file (hash mismatch or different source)
+    const userModified = targetSource !== SKILL_SOURCE ||
+      (targetHash && targetHash !== canonicalTargetHash) ||
+      (!targetHash && !targetMatchesSource);
 
-      if (targetHash) {
-        if (targetHash !== canonicalTargetHash) {
-          return { installed: false, needsForce: true };
-        }
-      } else if (!targetMatchesSource) {
-        return { installed: false, needsForce: true };
+    if (userModified) {
+      // Create timestamped backup
+      const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      backupFile = `${TARGET_SKILL_FILE}.backup.${timestamp}`;
+      // If backup already exists today, add time
+      if (fs.existsSync(backupFile)) {
+        const time = new Date().toISOString().slice(11, 16).replace(':', '');
+        backupFile = `${TARGET_SKILL_FILE}.backup.${timestamp}-${time}`;
       }
+      fs.writeFileSync(backupFile, targetContent);
     }
-
-    const backupFile = TARGET_SKILL_FILE + '.backup';
-    fs.writeFileSync(backupFile, targetContent);
   }
 
   // Install
   fs.writeFileSync(TARGET_SKILL_FILE, normalizedSourceContent);
 
-  return { installed: true };
+  return { installed: true, backupFile };
 }
 
 /**
