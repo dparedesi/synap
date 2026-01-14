@@ -21,8 +21,10 @@ scripts/
   postinstall.js   # npm postinstall - shows hints
 
 .claude/skills/synap-assistant/
-  SKILL.md         # AI agent skill for Claude Code
+  SKILL.md         # AI agent skill for Claude Code (source of truth)
 ```
+
+**Important**: The global skill at `~/.claude/skills/synap-assistant/SKILL.md` is auto-installed from this repo via `synap install-skill` or npm postinstall. **Never edit the global skill directly** — always edit the local `.claude/skills/synap-assistant/SKILL.md` in this repo, then reinstall.
 
 ## Key Patterns
 

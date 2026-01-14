@@ -335,7 +335,7 @@ async function addEntry(options) {
     content: options.content,
     title: options.title || extractTitle(options.content),
     type: VALID_TYPES.includes(options.type) ? options.type : 'idea',
-    status: 'raw',
+    status: VALID_STATUSES.includes(options.status) ? options.status : (options.priority ? 'active' : 'raw'),
     priority: options.priority && [1, 2, 3].includes(options.priority) ? options.priority : undefined,
     tags: options.tags || [],
     parent: parentId || undefined,

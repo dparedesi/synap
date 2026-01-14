@@ -388,6 +388,8 @@ When user is dumping thoughts rapidly:
 2. Use default type (idea) and status (raw)
 3. After the capture session, offer to triage
 
+**Smart status defaulting**: When capturing with priority set, the CLI auto-promotes to `active` status (skipping triage). When adding entries with full metadata (priority, tags, due), there's no need to manually set status—the entry is already triaged.
+
 ## Classification Rules
 
 ### Type Detection Heuristics

@@ -105,6 +105,7 @@ async function main() {
     .option('--tags <tags>', 'Comma-separated tags')
     .option('--parent <id>', 'Parent entry ID')
     .option('--due <date>', 'Due date (YYYY-MM-DD, 3d/1w, or keywords: today, tomorrow, next monday)')
+    .option('-s, --status <status>', 'Status (raw, active, wip, someday)')
     .option('--json', 'Output as JSON')
     .action(async (contentParts, options) => {
       const content = contentParts.join(' ');
@@ -119,6 +120,7 @@ async function main() {
           tags,
           parent: options.parent,
           due: options.due,
+          status: options.status,
           source: 'cli'
         });
 
@@ -147,6 +149,7 @@ async function main() {
     .option('--tags <tags>', 'Comma-separated tags')
     .option('--parent <id>', 'Parent entry ID')
     .option('--due <date>', 'Due date (YYYY-MM-DD, 3d/1w, or keywords: today, tomorrow, next monday)')
+    .option('-s, --status <status>', 'Status (raw, active, wip, someday)')
     .option('--json', 'Output as JSON')
     .action(async (contentParts, options) => {
       const content = contentParts.join(' ');
@@ -160,6 +163,7 @@ async function main() {
           tags,
           parent: options.parent,
           due: options.due,
+          status: options.status,
           source: 'cli'
         });
 
@@ -188,6 +192,7 @@ async function main() {
     .option('--tags <tags>', 'Comma-separated tags')
     .option('--parent <id>', 'Parent entry ID')
     .option('--due <date>', 'Due date (YYYY-MM-DD, 3d/1w, or keywords: today, tomorrow, next monday)')
+    .option('-s, --status <status>', 'Status (raw, active, wip, someday)')
     .option('--json', 'Output as JSON')
     .action(async (contentParts, options) => {
       const content = contentParts.join(' ');
@@ -201,6 +206,7 @@ async function main() {
           tags,
           parent: options.parent,
           due: options.due,
+          status: options.status,
           source: 'cli'
         });
 
@@ -236,6 +242,7 @@ async function main() {
           tags,
           parent: options.parent,
           due: options.due,
+          status: options.status,
           source: 'cli'
         });
 
@@ -265,6 +272,7 @@ async function main() {
     .option('--tags <tags>', 'Comma-separated tags')
     .option('--parent <id>', 'Parent entry ID')
     .option('--due <date>', 'Due date (YYYY-MM-DD, 3d/1w, or keywords: today, tomorrow, next monday)')
+    .option('-s, --status <status>', 'Status (raw, active, wip, someday)')
     .option('--json', 'Output as JSON')
     .action(createTypeShorthand('idea'));
 
@@ -275,6 +283,7 @@ async function main() {
     .option('--tags <tags>', 'Comma-separated tags')
     .option('--parent <id>', 'Parent entry ID')
     .option('--due <date>', 'Due date (YYYY-MM-DD, 3d/1w, or keywords: today, tomorrow, next monday)')
+    .option('-s, --status <status>', 'Status (raw, active, wip, someday)')
     .option('--json', 'Output as JSON')
     .action(createTypeShorthand('project'));
 
@@ -285,6 +294,7 @@ async function main() {
     .option('--tags <tags>', 'Comma-separated tags')
     .option('--parent <id>', 'Parent entry ID')
     .option('--due <date>', 'Due date (YYYY-MM-DD, 3d/1w, or keywords: today, tomorrow, next monday)')
+    .option('-s, --status <status>', 'Status (raw, active, wip, someday)')
     .option('--json', 'Output as JSON')
     .action(createTypeShorthand('feature'));
 
@@ -295,6 +305,7 @@ async function main() {
     .option('--tags <tags>', 'Comma-separated tags')
     .option('--parent <id>', 'Parent entry ID')
     .option('--due <date>', 'Due date (YYYY-MM-DD, 3d/1w, or keywords: today, tomorrow, next monday)')
+    .option('-s, --status <status>', 'Status (raw, active, wip, someday)')
     .option('--json', 'Output as JSON')
     .action(createTypeShorthand('note'));
 
@@ -305,6 +316,7 @@ async function main() {
     .option('--tags <tags>', 'Comma-separated tags')
     .option('--parent <id>', 'Parent entry ID')
     .option('--due <date>', 'Due date (YYYY-MM-DD, 3d/1w, or keywords: today, tomorrow, next monday)')
+    .option('-s, --status <status>', 'Status (raw, active, wip, someday)')
     .option('--json', 'Output as JSON')
     .action(createTypeShorthand('reference', 'reference'));
 
