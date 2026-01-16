@@ -358,6 +358,65 @@ async function addEntry(options) {
 }
 
 /**
+ * Add multiple entries in a single batch
+ * @param {Array} entriesData - Array of entry options
+ * @returns {Array} - Array of created entries
+ */
+async function addEntries(entriesData) {
+  const data = loadEntries();
+  const created = [];
+  const now = new Date().toISOString();
+
+  for (const options of entriesData) {
+    // Resolve partial parent ID to full ID
+    let parentId = options.parent;
+    if (parentId) {
+      const parentEntry = data.entries.find(e => e.id.startsWith(parentId));
+      if (parentEntry) {
+        parentId = parentEntry.id;
+      }
+    }
+
+    // Parse due date if provided
+    let dueDate = undefined;
+    const dueInput = typeof options.due === 'string' ? options.due.trim() : options.due;
+    if (dueInput) {
+      dueDate = parseDate(dueInput);
+      if (!dueDate) {
+        throw new Error(`Invalid due date: ${options.due}`);
+      }
+    }
+
+    const entry = {
+      id: uuidv4(),
+      content: options.content,
+      title: options.title || extractTitle(options.content),
+      type: VALID_TYPES.includes(options.type) ? options.type : 'idea',
+      status: VALID_STATUSES.includes(options.status) ? options.status : (options.priority ? 'active' : 'raw'),
+      priority: options.priority && [1, 2, 3].includes(options.priority) ? options.priority : undefined,
+      tags: options.tags || [],
+      parent: parentId || undefined,
+      related: [],
+      due: dueDate,
+      createdAt: now,
+      updatedAt: now,
+      source: options.source || 'cli'
+    };
+
+    // Clean up undefined fields
+    Object.keys(entry).forEach(key => {
+      if (entry[key] === undefined) delete entry[key];
+    });
+
+    data.entries.push(entry);
+    created.push(entry);
+  }
+
+  saveEntries(data);
+  return created;
+}
+
+/**
  * Extract title from content (first line, max 60 chars)
  */
 function extractTitle(content) {
@@ -764,6 +823,7 @@ async function getStats() {
     byStatus: {},
     byType: {},
     highPriority: 0,
+    highPriorityActive: 0,
     createdThisWeek: 0,
     updatedToday: 0
   };
@@ -780,7 +840,12 @@ async function getStats() {
     stats.byType[entry.type] = (stats.byType[entry.type] || 0) + 1;
 
     // High priority
-    if (entry.priority === 1) stats.highPriority++;
+    if (entry.priority === 1) {
+      stats.highPriority++;
+      if (entry.status === 'raw' || entry.status === 'active') {
+        stats.highPriorityActive++;
+      }
+    }
 
     // Created this week
     if (new Date(entry.createdAt) >= oneWeekAgo) stats.createdThisWeek++;
@@ -932,6 +997,7 @@ async function importEntries(entries, options = {}) {
 
 module.exports = {
   addEntry,
+  addEntries,
   getEntry,
   getEntriesByIds,
   getChildren,

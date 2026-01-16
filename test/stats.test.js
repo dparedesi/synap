@@ -92,6 +92,23 @@ describe('stats command', () => {
     const result = runCli('stats');
 
     expect(result.highPriority).toBe(1);
+    expect(result.highPriorityActive).toBe(1);
+  });
+
+  it('distinguishes active vs non-active P1 entries', () => {
+    // Create P1 entries with different statuses
+    const p1Active = runCli('add "P1 active" --priority 1');
+    const p1Done = runCli('add "P1 done" --priority 1');
+    const p1Wip = runCli('add "P1 wip" --priority 1');
+
+    // Mark one as done, one as wip
+    runCli(`done ${p1Done.entry.id.slice(0, 8)}`);
+    runCli(`start ${p1Wip.entry.id.slice(0, 8)}`);
+
+    const result = runCli('stats');
+
+    expect(result.highPriority).toBe(3);        // Total P1 count
+    expect(result.highPriorityActive).toBe(1);  // Only raw+active P1
   });
 
   it('includes success field', () => {

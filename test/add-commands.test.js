@@ -187,3 +187,85 @@ describe('question command', () => {
     expect(result.entry.parent).toContain(parentId);
   });
 });
+
+describe('batch-add command', () => {
+  beforeEach(() => {
+    fs.mkdirSync(TEST_DIR, { recursive: true });
+  });
+
+  afterEach(() => {
+    fs.rmSync(TEST_DIR, { recursive: true, force: true });
+  });
+
+  it('adds multiple entries from file', () => {
+    const entries = [
+      { content: 'Batch entry 1', type: 'idea' },
+      { content: 'Batch entry 2', type: 'todo', priority: 1 },
+      { content: 'Batch entry 3', type: 'question', tags: ['test'] }
+    ];
+
+    const inputFile = path.join(TEST_DIR, 'batch.json');
+    fs.writeFileSync(inputFile, JSON.stringify(entries));
+
+    const result = runCli(`batch-add --file ${inputFile}`);
+
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(3);
+    expect(result.entries[0].type).toBe('idea');
+    expect(result.entries[1].priority).toBe(1);
+    expect(result.entries[2].tags).toContain('test');
+  });
+
+  it('supports dry-run mode', () => {
+    const entries = [
+      { content: 'Dry run entry', type: 'idea' }
+    ];
+
+    const inputFile = path.join(TEST_DIR, 'batch.json');
+    fs.writeFileSync(inputFile, JSON.stringify(entries));
+
+    const result = runCli(`batch-add --file ${inputFile} --dry-run`);
+
+    expect(result.success).toBe(true);
+    expect(result.dryRun).toBe(true);
+    expect(result.count).toBe(1);
+
+    // Verify nothing was added
+    const list = runCli('list --all');
+    expect(list.entries.length).toBe(0);
+  });
+
+  it('handles empty array', () => {
+    const inputFile = path.join(TEST_DIR, 'empty.json');
+    fs.writeFileSync(inputFile, JSON.stringify([]));
+
+    const result = runCli(`batch-add --file ${inputFile}`);
+
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(0);
+  });
+
+  it('handles object with entries property', () => {
+    const data = {
+      entries: [
+        { content: 'Entry from object', type: 'note' }
+      ]
+    };
+
+    const inputFile = path.join(TEST_DIR, 'batch-obj.json');
+    fs.writeFileSync(inputFile, JSON.stringify(data));
+
+    const result = runCli(`batch-add --file ${inputFile}`);
+
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(1);
+    expect(result.entries[0].type).toBe('note');
+  });
+
+  it('returns error for missing file', () => {
+    const result = runCli('batch-add --file /nonexistent/file.json');
+
+    expect(result.success).toBe(false);
+    expect(result.code).toBe('FILE_NOT_FOUND');
+  });
+});

@@ -147,6 +147,33 @@ synap log a1b2c3d4 "Completed first draft" --inherit-tags
 - `--inherit-tags`: Copy tags from parent entry
 - `--json`: JSON output
 
+#### `synap batch-add`
+Add multiple entries in one operation.
+
+```bash
+# From file
+synap batch-add --file entries.json
+
+# From stdin (pipe)
+echo '[{"content":"Task 1","type":"todo"},{"content":"Task 2","type":"todo"}]' | synap batch-add
+
+# Dry run
+synap batch-add --file entries.json --dry-run
+```
+
+**Input format (JSON array):**
+```json
+[
+  {"content": "First entry", "type": "idea"},
+  {"content": "Second entry", "type": "todo", "priority": 1, "tags": ["work"]}
+]
+```
+
+**Options**:
+- `--file <path>`: Read from JSON file
+- `--dry-run`: Preview what would be added
+- `--json`: JSON output
+
 ### Query Commands
 
 #### `synap list`
@@ -390,6 +417,24 @@ When user is dumping thoughts rapidly:
 
 **Smart status defaulting**: When capturing with priority set, the CLI auto-promotes to `active` status (skipping triage). When adding entries with full metadata (priority, tags, due), there's no need to manually set status—the entry is already triaged.
 
+### Grouping Detection Pattern
+
+After capture sessions, detect opportunities to group related entries:
+
+| Signal | Action |
+|--------|--------|
+| 3+ entries with same tag in one session | Suggest parent project with that tag as context |
+| 3+ entries mentioning same keyword/topic | Suggest linking as related or creating parent |
+| User mentions "for the X project" multiple times | Proactively suggest creating/linking to X project |
+
+**Grouping workflow:**
+1. After capture, analyze recent additions: `synap list --since 1h --json`
+2. Group by common tags or detect semantic similarity
+3. If grouping detected, propose: "These 4 entries seem related to [topic]. Create a parent project?"
+4. On confirmation:
+   - `synap add "[Topic] Project" --type project --tags "topic"`
+   - For each child: `synap link <child-id> <project-id> --as-parent`
+
 ## Classification Rules
 
 ### Type Detection Heuristics
@@ -429,6 +474,7 @@ When user is dumping thoughts rapidly:
 - If P1 todos exist, suggest `synap focus`.
 - If many stale active items exist, suggest a weekly review.
 - If preferences specify cadence, follow it by default.
+- If 3+ entries added with common tags/context, suggest grouping under a parent project (see Grouping Detection Pattern).
 
 ## Batch Processing Protocols
 

@@ -6,6 +6,7 @@
  */
 
 const { program } = require('commander');
+const fs = require('fs');
 const pkg = require('../package.json');
 
 // Storage and utility modules
@@ -370,6 +371,101 @@ async function main() {
           console.log(chalk.green(`Logged ${shortId} under ${parentShortId}:`));
           console.log(`  Parent: ${chalk.cyan(parent.title || parent.content.slice(0, 30))}`);
           console.log(`  Log: ${message.slice(0, 60)}${message.length > 60 ? '...' : ''}`);
+        }
+      } catch (err) {
+        if (options.json) {
+          console.log(JSON.stringify({ success: false, error: err.message }));
+        } else {
+          console.error(chalk.red(err.message));
+        }
+        process.exit(1);
+      }
+    });
+
+  program
+    .command('batch-add')
+    .description('Add multiple entries from JSON stdin or file')
+    .option('--file <path>', 'Read entries from JSON file')
+    .option('--dry-run', 'Preview what would be added')
+    .option('--json', 'Output as JSON')
+    .action(async (options) => {
+      let entriesData;
+
+      if (options.file) {
+        // Read from file
+        if (!fs.existsSync(options.file)) {
+          if (options.json) {
+            console.log(JSON.stringify({ success: false, error: `File not found: ${options.file}`, code: 'FILE_NOT_FOUND' }));
+          } else {
+            console.error(chalk.red(`File not found: ${options.file}`));
+          }
+          process.exit(1);
+        }
+        const content = fs.readFileSync(options.file, 'utf8');
+        entriesData = JSON.parse(content);
+      } else {
+        // Read from stdin
+        const chunks = [];
+        process.stdin.setEncoding('utf8');
+        for await (const chunk of process.stdin) {
+          chunks.push(chunk);
+        }
+        const input = chunks.join('');
+        if (!input.trim()) {
+          if (options.json) {
+            console.log(JSON.stringify({ success: false, error: 'No input provided. Pipe JSON array to stdin or use --file', code: 'NO_INPUT' }));
+          } else {
+            console.error(chalk.red('No input provided. Pipe JSON array to stdin or use --file'));
+          }
+          process.exit(1);
+        }
+        entriesData = JSON.parse(input);
+      }
+
+      // Normalize to array
+      if (!Array.isArray(entriesData)) {
+        entriesData = entriesData.entries || [entriesData];
+      }
+
+      if (entriesData.length === 0) {
+        if (options.json) {
+          console.log(JSON.stringify({ success: true, count: 0, entries: [] }));
+        } else {
+          console.log(chalk.gray('No entries to add'));
+        }
+        return;
+      }
+
+      // Merge config tags with each entry's tags
+      entriesData = entriesData.map(e => ({
+        ...e,
+        tags: [...new Set([...(config.defaultTags || []), ...(e.tags || [])])],
+        source: e.source || 'cli'
+      }));
+
+      if (options.dryRun) {
+        if (options.json) {
+          console.log(JSON.stringify({ success: true, dryRun: true, count: entriesData.length, entries: entriesData }));
+        } else {
+          console.log(chalk.yellow(`Would add ${entriesData.length} entries:`));
+          for (const entry of entriesData) {
+            console.log(`  [${entry.type || 'idea'}] ${entry.content?.slice(0, 50)}${entry.content?.length > 50 ? '...' : ''}`);
+          }
+        }
+        return;
+      }
+
+      try {
+        const created = await storage.addEntries(entriesData);
+
+        if (options.json) {
+          console.log(JSON.stringify({ success: true, count: created.length, entries: created }, null, 2));
+        } else {
+          console.log(chalk.green(`Added ${created.length} entries`));
+          for (const entry of created) {
+            const shortId = entry.id.slice(0, 8);
+            console.log(`  ${chalk.blue(shortId)} [${entry.type}] ${entry.title || entry.content.slice(0, 40)}`);
+          }
         }
       } catch (err) {
         if (options.json) {
@@ -1216,7 +1312,10 @@ async function main() {
           console.log(`    ${type.padEnd(12)} ${count}`);
         }
         console.log('');
-        console.log(`  High Priority (P1): ${stats.highPriority}`);
+        const p1Display = stats.highPriority === stats.highPriorityActive
+          ? `${stats.highPriority}`
+          : `${stats.highPriority} (${stats.highPriorityActive} active)`;
+        console.log(`  High Priority (P1): ${p1Display}`);
         console.log(`  Created this week:  ${stats.createdThisWeek}`);
         console.log(`  Updated today:      ${stats.updatedToday}`);
 
