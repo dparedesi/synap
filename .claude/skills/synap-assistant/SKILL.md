@@ -435,6 +435,37 @@ After capture sessions, detect opportunities to group related entries:
    - `synap add "[Topic] Project" --type project --tags "topic"`
    - For each child: `synap link <child-id> <project-id> --as-parent`
 
+### Daily Tracking Pattern
+
+For projects requiring ongoing progress logging (standups, journals, learning logs):
+
+| Signal | Action |
+|--------|--------|
+| Project mentions "daily", "track progress", "standup" | Suggest daily tracking setup |
+| User says "I need to log progress on X" | Explain `synap log` workflow |
+| Project has `--tags daily-tracking` | Ask for today's update |
+
+**Daily tracking workflow:**
+
+1. **Setup:** Create a project to track
+   ```bash
+   synap add "Learn Rust" --type project --tags "learning,daily-tracking"
+   ```
+
+2. **Daily logging:** Add timestamped progress
+   ```bash
+   synap log <project-id> "Completed chapter 3"
+   ```
+
+3. **Review progress:** View the log tree
+   ```bash
+   synap tree <project-id>
+   ```
+
+**When to suggest:** User creates learning/progress project, mentions accountability, or asks about daily tracking.
+
+**Do NOT auto-create** - always confirm with user first.
+
 ## Classification Rules
 
 ### Type Detection Heuristics
