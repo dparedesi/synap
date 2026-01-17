@@ -1749,7 +1749,16 @@ async function main() {
   // PREFERENCES COMMANDS
   // ============================================
 
-  program
+  const respondPreferencesError = (options, message, code = 'INVALID_ARGS') => {
+    if (options.json) {
+      console.log(JSON.stringify({ success: false, error: message, code }));
+    } else {
+      console.error(chalk.red(message));
+    }
+    process.exit(1);
+  };
+
+  const preferencesCommand = program
     .command('preferences')
     .description('View or update user preferences')
     .option('--edit', 'Open preferences in $EDITOR')
@@ -1761,22 +1770,13 @@ async function main() {
       const hasAppend = Array.isArray(options.append);
       const activeFlags = [options.edit, options.reset, hasAppend].filter(Boolean).length;
 
-      const respondError = (message, code = 'INVALID_ARGS') => {
-        if (options.json) {
-          console.log(JSON.stringify({ success: false, error: message, code }));
-        } else {
-          console.error(chalk.red(message));
-        }
-        process.exit(1);
-      };
-
       if (activeFlags > 1) {
-        respondError('Use only one of --edit, --reset, or --append');
+        respondPreferencesError(options, 'Use only one of --edit, --reset, or --append');
       }
       try {
         if (options.edit) {
           if (options.json) {
-            respondError('Cannot use --json with --edit', 'INVALID_MODE');
+            respondPreferencesError(options, 'Cannot use --json with --edit', 'INVALID_MODE');
           }
 
           preferences.loadPreferences();
@@ -1832,7 +1832,7 @@ async function main() {
         if (hasAppend) {
           const values = options.append || [];
           if (values.length < 2) {
-            respondError('Usage: synap preferences --append "## Section" "Text to append"');
+            respondPreferencesError(options, 'Usage: synap preferences --append "## Section" "Text to append"');
           }
 
           const [section, ...textParts] = values;
@@ -1865,7 +1865,160 @@ async function main() {
           console.log(content);
         }
       } catch (err) {
-        respondError(err.message || 'Failed to update preferences', 'PREFERENCES_ERROR');
+        respondPreferencesError(options, err.message || 'Failed to update preferences', 'PREFERENCES_ERROR');
+      }
+    });
+
+  preferencesCommand
+    .command('set')
+    .description('Add a preference entry to a section')
+    .option('--section <section>', 'Section name or alias')
+    .option('--entry <entry>', 'Entry text')
+    .option('--json', 'Output as JSON')
+    .action((options) => {
+      if (!options.section || !options.entry) {
+        respondPreferencesError(
+          options,
+          'Usage: synap preferences set --section "tags" --entry "text to add"'
+        );
+      }
+
+      try {
+        const result = preferences.setEntry(options.section, options.entry);
+        const payload = { ...result, path: preferences.getPreferencesPath() };
+
+        if (options.json) {
+          console.log(JSON.stringify(payload, null, 2));
+        } else if (result.added) {
+          console.log(chalk.green(`Added entry to ${result.section}`));
+        } else {
+          console.log(chalk.yellow(`Entry already exists in ${result.section}`));
+        }
+      } catch (err) {
+        respondPreferencesError(options, err.message || 'Failed to set preferences', 'PREFERENCES_ERROR');
+      }
+    });
+
+  preferencesCommand
+    .command('remove')
+    .description('Remove preference entries from a section')
+    .option('--section <section>', 'Section name or alias')
+    .option('--match <pattern>', 'Match text (case-insensitive substring)')
+    .option('--entry <entry>', 'Exact entry text')
+    .option('--json', 'Output as JSON')
+    .action((options) => {
+      if (!options.section) {
+        respondPreferencesError(
+          options,
+          'Usage: synap preferences remove --section "tags" --match "urgent"'
+        );
+      }
+      if (options.match && options.entry) {
+        respondPreferencesError(options, 'Use only one of --match or --entry');
+      }
+      if (!options.match && !options.entry) {
+        respondPreferencesError(
+          options,
+          'Usage: synap preferences remove --section "tags" --match "urgent"'
+        );
+      }
+
+      try {
+        const result = preferences.removeFromSection(options.section, {
+          match: options.match,
+          entry: options.entry
+        });
+        const payload = { ...result, path: preferences.getPreferencesPath() };
+
+        if (options.json) {
+          console.log(JSON.stringify(payload, null, 2));
+        } else if (result.removed) {
+          console.log(chalk.green(`Removed ${result.count} entr${result.count === 1 ? 'y' : 'ies'} from ${result.section}`));
+        } else {
+          console.log(chalk.yellow(`No entries matched in ${result.section}`));
+        }
+      } catch (err) {
+        respondPreferencesError(options, err.message || 'Failed to remove preferences', 'PREFERENCES_ERROR');
+      }
+    });
+
+  preferencesCommand
+    .command('list')
+    .description('List preference entries')
+    .option('--section <section>', 'Section name or alias')
+    .option('--json', 'Output as JSON')
+    .action((options) => {
+      try {
+        if (options.section) {
+          const section = preferences.resolveSection(options.section);
+          const entries = preferences.getEntriesInSection(section);
+          const payload = { section, entries, count: entries.length };
+
+          if (options.json) {
+            console.log(JSON.stringify(payload, null, 2));
+          } else if (entries.length === 0) {
+            console.log(chalk.gray(`No entries found in ${section}`));
+          } else {
+            console.log(chalk.bold(section));
+            entries.forEach((entry) => {
+              console.log(`- ${entry}`);
+            });
+          }
+          return;
+        }
+
+        const content = preferences.loadPreferences();
+        const lines = content.split(/\r?\n/);
+        const sections = [];
+        let current = null;
+
+        for (const line of lines) {
+          const headingMatch = line.match(/^(#{1,6})\s*(.+?)\s*$/);
+          if (headingMatch) {
+            const level = headingMatch[1].length;
+            const name = headingMatch[2].trim();
+
+            if (level === 2) {
+              current = { section: name, entries: [] };
+              sections.push(current);
+            } else if (level === 1) {
+              current = null;
+            }
+            continue;
+          }
+
+          if (!current) {
+            continue;
+          }
+
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith('<!--') || /^(#{1,6})\s+/.test(trimmed)) {
+            continue;
+          }
+
+          current.entries.push(trimmed);
+        }
+
+        const populatedSections = sections.filter(section => section.entries.length > 0);
+        const totalEntries = populatedSections.reduce((sum, section) => sum + section.entries.length, 0);
+
+        if (options.json) {
+          console.log(JSON.stringify({ sections: populatedSections, count: totalEntries }, null, 2));
+        } else if (populatedSections.length === 0) {
+          console.log(chalk.gray('No preference entries found'));
+        } else {
+          populatedSections.forEach((section, index) => {
+            if (index > 0) {
+              console.log('');
+            }
+            console.log(chalk.bold(section.section));
+            section.entries.forEach((entry) => {
+              console.log(`- ${entry}`);
+            });
+          });
+        }
+      } catch (err) {
+        respondPreferencesError(options, err.message || 'Failed to list preferences', 'PREFERENCES_ERROR');
       }
     });
 

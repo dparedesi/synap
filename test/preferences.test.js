@@ -63,4 +63,40 @@ describe('preferences', () => {
     expect(updated).toContain('## New Section');
     expect(updated).toContain('Hello there.');
   });
+
+  it('resolves section aliases', () => {
+    expect(preferences.resolveSection('tags')).toBe('Tag Meanings');
+    expect(preferences.resolveSection('About')).toBe('About Me');
+    expect(preferences.resolveSection('## review')).toBe('Review Preferences');
+  });
+
+  it('sets entries idempotently', () => {
+    preferences.resetPreferences();
+    const first = preferences.setEntry('tags', '#urgent = must do today');
+    const second = preferences.setEntry('Tag Meanings', '#urgent = must do today');
+    const entries = preferences.getEntriesInSection('Tag Meanings');
+
+    expect(first.added).toBe(true);
+    expect(first.existed).toBe(false);
+    expect(second.added).toBe(false);
+    expect(second.existed).toBe(true);
+    expect(entries).toEqual(['#urgent = must do today']);
+  });
+
+  it('removes entries by match or entry', () => {
+    preferences.resetPreferences();
+    preferences.setEntry('tags', '#urgent = must do today');
+    preferences.setEntry('tags', '#later = next week');
+
+    const matchResult = preferences.removeFromSection('tags', { match: 'urgent' });
+    expect(matchResult.removed).toBe(true);
+    expect(matchResult.count).toBe(1);
+    expect(matchResult.entries).toEqual(['#urgent = must do today']);
+
+    const entryResult = preferences.removeFromSection('tags', { entry: '#later = next week' });
+    expect(entryResult.removed).toBe(true);
+    expect(entryResult.count).toBe(1);
+    expect(entryResult.entries).toEqual(['#later = next week']);
+    expect(preferences.getEntriesInSection('tags')).toEqual([]);
+  });
 });

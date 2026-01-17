@@ -39,8 +39,11 @@ When assisting users with their synap entries:
 synap stores long-term user preferences at `~/.config/synap/user-preferences.md`.
 
 - Read preferences at the start of a session when present.
-- Append stable, reusable preferences with `synap preferences --append "## Section" "..."`.
-- Avoid overwriting user-written content; prefer section-based appends.
+- Prefer idempotent updates with `synap preferences set --section "Tag Meanings" --entry "#urgent = must do today"`.
+- Remove entries with `synap preferences remove --section tags --match "urgent"`.
+- List entries with `synap preferences list --section tags --json`.
+- `synap preferences --append "## Section" "..."` is still supported for raw appends.
+- Avoid overwriting user-written content; prefer section-based updates.
 
 ## Operating Modes
 
@@ -79,6 +82,7 @@ Detect user intent and respond appropriately:
 | Get stats | `synap stats` |
 | Setup wizard | `synap setup` |
 | Edit preferences | `synap preferences --edit` |
+| Set preference | `synap preferences set --section tags --entry "#urgent = must do today"` |
 
 ## Pre-flight Check
 

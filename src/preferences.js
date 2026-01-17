@@ -9,6 +9,17 @@ const storage = require('./storage');
 const TEMPLATE_PATH = path.join(__dirname, 'templates', 'user-preferences-template.md');
 const PREFERENCES_FILE = path.join(storage.CONFIG_DIR, 'user-preferences.md');
 const MAX_LINES = 500;
+const SECTION_ALIASES = new Map([
+  ['about', 'About Me'],
+  ['me', 'About Me'],
+  ['projects', 'Important Projects'],
+  ['important', 'Important Projects'],
+  ['tags', 'Tag Meanings'],
+  ['tag', 'Tag Meanings'],
+  ['review', 'Review Preferences'],
+  ['behavior', 'Behavioral Preferences'],
+  ['behavioral', 'Behavioral Preferences']
+]);
 
 function ensureConfigDir() {
   if (!fs.existsSync(storage.CONFIG_DIR)) {
@@ -79,7 +90,16 @@ function resetPreferences() {
   return savePreferences(template);
 }
 
+function resolveSection(input) {
+  const target = parseSectionTarget(input);
+  const key = target.name.toLowerCase();
+  return SECTION_ALIASES.get(key) || target.name;
+}
+
 function parseSectionTarget(section) {
+  if (typeof section !== 'string') {
+    throw new Error('Section name is required');
+  }
   const trimmed = section.trim();
   if (!trimmed) {
     throw new Error('Section name is required');
@@ -93,9 +113,22 @@ function parseSectionTarget(section) {
   return { level: null, name: trimmed };
 }
 
+function normalizeEntry(entry) {
+  return entry.trim();
+}
+
+function isCommentLine(line) {
+  const trimmed = line.trim();
+  return trimmed.startsWith('<!--');
+}
+
+function isHeadingLine(line) {
+  return /^(#{1,6})\s+/.test(line.trim());
+}
+
 function findSection(lines, target) {
   for (let i = 0; i < lines.length; i += 1) {
-    const match = lines[i].match(/^(#{1,6})\s*(.+?)\s*$/);
+    const match = lines[i].match(/^(#{1,6})\s+(.+?)\s*$/);
     if (!match) {
       continue;
     }
@@ -111,6 +144,148 @@ function findSection(lines, target) {
     }
   }
   return null;
+}
+
+function getSectionRange(lines, match) {
+  if (!match) {
+    return null;
+  }
+
+  let endIndex = lines.length;
+  for (let i = match.index + 1; i < lines.length; i += 1) {
+    const headingMatch = lines[i].match(/^(#{1,6})\s+(.+?)\s*$/);
+    if (!headingMatch) {
+      continue;
+    }
+    const level = headingMatch[1].length;
+    if (level <= match.level) {
+      endIndex = i;
+      break;
+    }
+  }
+
+  return { start: match.index, end: endIndex };
+}
+
+function getEntriesInSection(section) {
+  const resolved = resolveSection(section);
+  const content = loadPreferences();
+  const lines = content.split(/\r?\n/);
+  const target = parseSectionTarget(resolved);
+  const match = findSection(lines, target);
+
+  if (!match) {
+    return [];
+  }
+
+  const range = getSectionRange(lines, match);
+  const entries = [];
+
+  for (let i = match.index + 1; i < range.end; i += 1) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (!trimmed || isCommentLine(trimmed) || isHeadingLine(trimmed)) {
+      continue;
+    }
+
+    entries.push(trimmed);
+  }
+
+  return entries;
+}
+
+function setEntry(section, entry) {
+  if (typeof entry !== 'string' || !entry.trim()) {
+    throw new Error('Entry text is required');
+  }
+
+  const resolved = resolveSection(section);
+  const normalized = normalizeEntry(entry);
+  const entries = getEntriesInSection(resolved);
+  const existed = entries.some((existing) => existing === normalized);
+
+  if (existed) {
+    return {
+      added: false,
+      existed: true,
+      section: resolved,
+      entry: normalized
+    };
+  }
+
+  appendToSection(resolved, normalized);
+  return {
+    added: true,
+    existed: false,
+    section: resolved,
+    entry: normalized
+  };
+}
+
+function removeFromSection(section, { match, entry } = {}) {
+  const hasMatch = typeof match === 'string' && match.trim();
+  const hasEntry = typeof entry === 'string' && entry.trim();
+
+  if (!hasMatch && !hasEntry) {
+    throw new Error('Match or entry is required');
+  }
+  if (hasMatch && hasEntry) {
+    throw new Error('Use either match or entry, not both');
+  }
+
+  const resolved = resolveSection(section);
+  const content = loadPreferences();
+  const lines = content.split(/\r?\n/);
+  const target = parseSectionTarget(resolved);
+  const sectionMatch = findSection(lines, target);
+
+  if (!sectionMatch) {
+    return { removed: false, count: 0, entries: [], section: resolved };
+  }
+
+  const range = getSectionRange(lines, sectionMatch);
+  const sectionLines = lines.slice(sectionMatch.index + 1, range.end);
+  const removedEntries = [];
+  const normalizedEntry = hasEntry ? normalizeEntry(entry) : null;
+  const matchNeedle = hasMatch ? match.trim().toLowerCase() : null;
+
+  const updatedSectionLines = sectionLines.filter((line) => {
+    const trimmed = line.trim();
+
+    if (!trimmed || isCommentLine(trimmed) || isHeadingLine(trimmed)) {
+      return true;
+    }
+
+    const matches = normalizedEntry
+      ? trimmed === normalizedEntry
+      : trimmed.toLowerCase().includes(matchNeedle);
+
+    if (matches) {
+      removedEntries.push(trimmed);
+      return false;
+    }
+
+    return true;
+  });
+
+  if (removedEntries.length === 0) {
+    return { removed: false, count: 0, entries: [], section: resolved };
+  }
+
+  const updatedLines = [
+    ...lines.slice(0, sectionMatch.index + 1),
+    ...updatedSectionLines,
+    ...lines.slice(range.end)
+  ];
+
+  savePreferences(updatedLines.join('\n'));
+  return {
+    removed: true,
+    count: removedEntries.length,
+    entries: removedEntries,
+    section: resolved
+  };
 }
 
 function appendToSection(section, text) {
@@ -140,7 +315,7 @@ function appendToSection(section, text) {
 
   let insertIndex = lines.length;
   for (let i = match.index + 1; i < lines.length; i += 1) {
-    const headingMatch = lines[i].match(/^(#{1,6})\s*(.+?)\s*$/);
+    const headingMatch = lines[i].match(/^(#{1,6})\s+(.+?)\s*$/);
     if (!headingMatch) {
       continue;
     }
@@ -167,6 +342,10 @@ module.exports = {
   getPreferencesPath,
   loadPreferences,
   savePreferences,
+  resolveSection,
+  setEntry,
+  removeFromSection,
+  getEntriesInSection,
   appendToSection,
   resetPreferences,
   validatePreferences,
