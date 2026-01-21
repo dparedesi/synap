@@ -1,5 +1,7 @@
 /**
  * preferences.js - User preferences storage and helpers
+ * 
+ * User preferences are stored in DATA_DIR (syncable) not CONFIG_DIR
  */
 
 const fs = require('fs');
@@ -7,7 +9,6 @@ const path = require('path');
 const storage = require('./storage');
 
 const TEMPLATE_PATH = path.join(__dirname, 'templates', 'user-preferences-template.md');
-const PREFERENCES_FILE = path.join(storage.CONFIG_DIR, 'user-preferences.md');
 const MAX_LINES = 500;
 const SECTION_ALIASES = new Map([
   ['about', 'About Me'],
@@ -21,14 +22,22 @@ const SECTION_ALIASES = new Map([
   ['behavioral', 'Behavioral Preferences']
 ]);
 
-function ensureConfigDir() {
-  if (!fs.existsSync(storage.CONFIG_DIR)) {
-    fs.mkdirSync(storage.CONFIG_DIR, { recursive: true });
+/**
+ * Get current preferences file path (dynamic, based on DATA_DIR)
+ */
+function getPreferencesFilePath() {
+  return path.join(storage.DATA_DIR, 'user-preferences.md');
+}
+
+function ensureDataDir() {
+  const dataDir = storage.DATA_DIR;
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
   }
 }
 
 function getPreferencesPath() {
-  return PREFERENCES_FILE;
+  return getPreferencesFilePath();
 }
 
 function readTemplate() {
@@ -62,22 +71,24 @@ function savePreferences(content) {
     throw new Error(validation.error);
   }
 
-  ensureConfigDir();
-  const tmpPath = `${PREFERENCES_FILE}.tmp`;
+  ensureDataDir();
+  const preferencesFile = getPreferencesFilePath();
+  const tmpPath = `${preferencesFile}.tmp`;
   fs.writeFileSync(tmpPath, content, 'utf8');
-  fs.renameSync(tmpPath, PREFERENCES_FILE);
+  fs.renameSync(tmpPath, preferencesFile);
   return content;
 }
 
 function loadPreferences() {
-  ensureConfigDir();
-  if (!fs.existsSync(PREFERENCES_FILE)) {
+  ensureDataDir();
+  const preferencesFile = getPreferencesFilePath();
+  if (!fs.existsSync(preferencesFile)) {
     const template = readTemplate();
     savePreferences(template);
     return template;
   }
 
-  const content = fs.readFileSync(PREFERENCES_FILE, 'utf8');
+  const content = fs.readFileSync(preferencesFile, 'utf8');
   const validation = validatePreferences(content);
   if (!validation.valid) {
     throw new Error(validation.error);
@@ -349,6 +360,6 @@ module.exports = {
   appendToSection,
   resetPreferences,
   validatePreferences,
-  PREFERENCES_FILE,
+  get PREFERENCES_FILE() { return getPreferencesFilePath(); },
   TEMPLATE_PATH
 };

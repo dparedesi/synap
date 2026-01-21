@@ -7,16 +7,30 @@ const path = require('path');
 const os = require('os');
 const { v4: uuidv4 } = require('uuid');
 
-// Storage directory
-const CONFIG_DIR = process.env.SYNAP_DIR || path.join(os.homedir(), '.config', 'synap');
-const ENTRIES_FILE = path.join(CONFIG_DIR, 'entries.json');
-const ARCHIVE_FILE = path.join(CONFIG_DIR, 'archive.json');
-const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
+// =============================================================================
+// Directory Resolution (XDG-compliant with backward compatibility)
+// =============================================================================
 
-// Valid types, statuses, and date formats
-const VALID_TYPES = ['idea', 'project', 'feature', 'todo', 'question', 'reference', 'note'];
-const VALID_STATUSES = ['raw', 'active', 'wip', 'someday', 'done', 'archived'];
-const VALID_DATE_FORMATS = ['relative', 'absolute', 'locale'];
+/**
+ * Resolve the config directory path
+ * Priority:
+ *   1. SYNAP_CONFIG_DIR env var (explicit override for config only)
+ *   2. SYNAP_DIR env var (legacy - affects both config and data)
+ *   3. Default: ~/.config/synap
+ */
+function resolveConfigDir() {
+  if (process.env.SYNAP_CONFIG_DIR) {
+    return process.env.SYNAP_CONFIG_DIR;
+  }
+  if (process.env.SYNAP_DIR) {
+    return process.env.SYNAP_DIR;
+  }
+  return path.join(os.homedir(), '.config', 'synap');
+}
+
+// Config directory - always local, not synced
+const CONFIG_DIR = resolveConfigDir();
+const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
 /**
  * Ensure config directory exists
@@ -26,6 +40,90 @@ function ensureConfigDir() {
     fs.mkdirSync(CONFIG_DIR, { recursive: true });
   }
 }
+
+/**
+ * Load configuration (needed before resolving DATA_DIR)
+ */
+function loadConfigRaw() {
+  ensureConfigDir();
+  if (!fs.existsSync(CONFIG_FILE)) {
+    return {};
+  }
+  try {
+    return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Resolve the data directory path
+ * Priority:
+ *   1. SYNAP_DATA_DIR env var (explicit override for data only)
+ *   2. config.json -> dataDir setting
+ *   3. SYNAP_DIR env var (legacy - affects both config and data)
+ *   4. Default: ~/.local/share/synap (XDG compliant)
+ */
+function resolveDataDir() {
+  // 1. Explicit env var override for data
+  if (process.env.SYNAP_DATA_DIR) {
+    return process.env.SYNAP_DATA_DIR;
+  }
+
+  // 2. Config file setting
+  const rawConfig = loadConfigRaw();
+  if (rawConfig.dataDir) {
+    // Expand ~ to home directory
+    const expanded = rawConfig.dataDir.replace(/^~/, os.homedir());
+    return expanded;
+  }
+
+  // 3. Legacy env var (affects both config and data)
+  if (process.env.SYNAP_DIR) {
+    return process.env.SYNAP_DIR;
+  }
+
+  // 4. Default: XDG-compliant data directory
+  return path.join(os.homedir(), '.local', 'share', 'synap');
+}
+
+// Resolve DATA_DIR at module load time
+// This will be re-evaluated if config changes require restart
+let DATA_DIR = resolveDataDir();
+
+// Data files (syncable)
+let ENTRIES_FILE = path.join(DATA_DIR, 'entries.json');
+let ARCHIVE_FILE = path.join(DATA_DIR, 'archive.json');
+
+/**
+ * Refresh data directory paths (call after config change)
+ */
+function refreshDataDir() {
+  DATA_DIR = resolveDataDir();
+  ENTRIES_FILE = path.join(DATA_DIR, 'entries.json');
+  ARCHIVE_FILE = path.join(DATA_DIR, 'archive.json');
+}
+
+/**
+ * Get current data directory path
+ */
+function getDataDir() {
+  return DATA_DIR;
+}
+
+/**
+ * Ensure data directory exists
+ */
+function ensureDataDir() {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+}
+
+// Valid types, statuses, and date formats
+const VALID_TYPES = ['idea', 'project', 'feature', 'todo', 'question', 'reference', 'note'];
+const VALID_STATUSES = ['raw', 'active', 'wip', 'someday', 'done', 'archived'];
+const VALID_DATE_FORMATS = ['relative', 'absolute', 'locale'];
 
 /**
  * Atomic file write - write to temp file then rename
@@ -40,7 +138,7 @@ function atomicWriteSync(filePath, data) {
  * Load entries from file
  */
 function loadEntries() {
-  ensureConfigDir();
+  ensureDataDir();
   if (!fs.existsSync(ENTRIES_FILE)) {
     return { version: 1, entries: [] };
   }
@@ -55,7 +153,7 @@ function loadEntries() {
  * Save entries to file
  */
 function saveEntries(data) {
-  ensureConfigDir();
+  ensureDataDir();
   atomicWriteSync(ENTRIES_FILE, data);
 }
 
@@ -63,7 +161,7 @@ function saveEntries(data) {
  * Load archived entries
  */
 function loadArchive() {
-  ensureConfigDir();
+  ensureDataDir();
   if (!fs.existsSync(ARCHIVE_FILE)) {
     return { version: 1, entries: [] };
   }
@@ -78,7 +176,7 @@ function loadArchive() {
  * Save archived entries
  */
 function saveArchive(data) {
-  ensureConfigDir();
+  ensureDataDir();
   atomicWriteSync(ARCHIVE_FILE, data);
 }
 
@@ -91,7 +189,8 @@ function loadConfig() {
     defaultType: 'idea',
     defaultTags: [],
     editor: null, // Falls back to EDITOR env var in CLI
-    dateFormat: 'relative'
+    dateFormat: 'relative',
+    dataDir: null // Custom data directory (null = use default)
   };
 
   if (!fs.existsSync(CONFIG_FILE)) {
@@ -123,6 +222,12 @@ function loadConfig() {
         .map(t => t.trim());
     }
 
+    // Validate dataDir if set
+    if (config.dataDir !== null && typeof config.dataDir !== 'string') {
+      console.warn(`Warning: Invalid dataDir in config. Ignoring.`);
+      config.dataDir = null;
+    }
+
     return config;
   } catch (err) {
     console.warn(`Warning: Could not parse config.json: ${err.message}`);
@@ -138,7 +243,8 @@ function getDefaultConfig() {
     defaultType: 'idea',
     defaultTags: [],
     editor: null,
-    dateFormat: 'relative'
+    dateFormat: 'relative',
+    dataDir: null
   };
 }
 
@@ -169,6 +275,17 @@ function validateConfigValue(key, value) {
       break;
     case 'editor':
       // Any string or null is valid
+      break;
+    case 'dataDir':
+      // Path validation - must be a valid path string or null
+      if (value !== null && value !== 'null' && typeof value === 'string') {
+        const expanded = value.replace(/^~/, os.homedir());
+        // Check if parent directory exists (we'll create the target if needed)
+        const parentDir = path.dirname(expanded);
+        if (!fs.existsSync(parentDir)) {
+          return { valid: false, error: `Parent directory does not exist: ${parentDir}` };
+        }
+      }
       break;
   }
   return { valid: true };
@@ -1018,9 +1135,12 @@ module.exports = {
   validateConfigValue,
   saveConfig,
   parseDate,
+  refreshDataDir,
+  getDataDir,
   CONFIG_DIR,
-  ENTRIES_FILE,
-  ARCHIVE_FILE,
+  get DATA_DIR() { return DATA_DIR; },
+  get ENTRIES_FILE() { return ENTRIES_FILE; },
+  get ARCHIVE_FILE() { return ARCHIVE_FILE; },
   VALID_TYPES,
   VALID_STATUSES,
   VALID_DATE_FORMATS

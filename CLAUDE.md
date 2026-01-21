@@ -35,13 +35,15 @@ This CLI follows the "Agent-Ready CLI" pattern:
 - Safety patterns: log before delete, dry-run, undo capability
 
 ### Storage
-- All data in `~/.config/synap/`
-- `entries.json`: Active entries
-- `archive.json`: Archived entries
-- `deletion-log.json`: Audit log for restore capability
-- `config.json`: User configuration (defaultType, defaultTags, editor, dateFormat)
-- `user-preferences.md`: Agent-readable preferences
+- **Config directory** (local, not synced): `~/.config/synap/`
+  - `config.json`: User configuration (defaultType, defaultTags, editor, dateFormat, dataDir)
+  - `deletion-log.json`: Audit log for restore capability
+- **Data directory** (syncable, configurable): `~/.config/synap/` by default, or custom via `dataDir` config
+  - `entries.json`: Active entries
+  - `archive.json`: Archived entries
+  - `user-preferences.md`: Agent-readable preferences
 - Atomic writes (write to .tmp, then rename)
+- Custom data directory: `synap config dataDir ~/synap-data` (for git/Dropbox/iCloud sync)
 
 ### Entry Model
 ```typescript

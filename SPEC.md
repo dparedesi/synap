@@ -634,8 +634,36 @@ All deletions are logged to `deletion-log.json` BEFORE the delete operation. Thi
 
 | Variable | Description |
 |----------|-------------|
-| `SYNAP_DIR` | Override config directory (default: `~/.config/synap`) |
+| `SYNAP_DIR` | Override both config and data directory (legacy, backward compatible) |
+| `SYNAP_CONFIG_DIR` | Override config directory only |
+| `SYNAP_DATA_DIR` | Override data directory only |
 | `EDITOR` | Editor for interactive edit |
+
+### Storage Locations
+
+**Default (backward compatible):**
+```
+~/.config/synap/
+├── config.json           # Settings (local)
+├── deletion-log.json     # Audit log (local)
+├── entries.json          # Data (syncable)
+├── archive.json          # Data (syncable)
+└── user-preferences.md   # Data (syncable)
+```
+
+**With custom dataDir:**
+```
+~/.config/synap/          # Config (local)
+├── config.json
+└── deletion-log.json
+
+~/synap-data/             # Data (syncable, user-configured)
+├── entries.json
+├── archive.json
+└── user-preferences.md
+```
+
+Configure with: `synap config dataDir ~/synap-data`
 
 ---
 
@@ -663,10 +691,12 @@ All deletions are logged to `deletion-log.json` BEFORE the delete operation. Thi
 
 ## Future Considerations
 
-### Multi-device Sync
+### Multi-device Sync ✅ (Implemented v0.8.0)
 
-- Design supports merge-friendly data (UUIDs, updatedAt timestamps)
-- Potential approaches: Git-based sync, cloud sync, or manual export/import
+- Custom data directory via `synap config dataDir <path>`
+- Users can point to a git repo, Dropbox, or iCloud folder
+- Config stays local, data is syncable
+- `synap setup` wizard includes data location step
 
 ### Performance at Scale
 

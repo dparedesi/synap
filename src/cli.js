@@ -2032,6 +2032,8 @@ async function main() {
     .option('--json', 'Output as JSON')
     .action(async (options) => {
       const fs = require('fs');
+      const os = require('os');
+      const path = require('path');
 
       let hasEntries = false;
       if (fs.existsSync(storage.ENTRIES_FILE)) {
@@ -2043,16 +2045,9 @@ async function main() {
         }
       }
 
-      let createdEntry = null;
-      if (!hasEntries) {
-        createdEntry = await storage.addEntry({
-          content: 'My first thought',
-          type: config.defaultType || 'idea',
-          source: 'setup'
-        });
-      }
-
       let skillResult = { prompted: false };
+      let dataLocationResult = { configured: false };
+      
       if (!options.json) {
         console.log('');
         console.log(chalk.bold('Welcome to synap!\n'));
@@ -2061,19 +2056,93 @@ async function main() {
 
         console.log('Let\'s get you set up:\n');
 
-        console.log('[1/3] Quick capture test...');
-        if (createdEntry) {
+        // Step 1: Data location (only ask if not already configured)
+        const currentConfig = storage.loadConfig();
+        console.log('[1/4] Data location...');
+        
+        if (currentConfig.dataDir) {
+          console.log(`      ${chalk.gray('Already configured:')} ${storage.DATA_DIR}`);
+          dataLocationResult.configured = true;
+          dataLocationResult.path = storage.DATA_DIR;
+        } else {
+          const { select, input } = await import('@inquirer/prompts');
+          const dataChoice = await select({
+            message: 'Where should synap store your data?',
+            choices: [
+              { 
+                name: `Default (${path.join(os.homedir(), '.config', 'synap')})`, 
+                value: 'default',
+                description: 'Recommended for most users'
+              },
+              { 
+                name: 'Custom path (for git sync, Dropbox, iCloud)', 
+                value: 'custom',
+                description: 'Choose a custom folder for syncing across devices'
+              }
+            ]
+          });
+
+          if (dataChoice === 'custom') {
+            const defaultSuggestion = path.join(os.homedir(), 'synap-data');
+            const customPath = await input({
+              message: 'Enter path for synap data:',
+              default: defaultSuggestion,
+              validate: (val) => {
+                if (!val.trim()) return 'Path is required';
+                const expanded = val.replace(/^~/, os.homedir());
+                const parentDir = path.dirname(expanded);
+                if (!fs.existsSync(parentDir)) {
+                  return `Parent directory does not exist: ${parentDir}`;
+                }
+                return true;
+              }
+            });
+
+            const expanded = customPath.replace(/^~/, os.homedir());
+            
+            // Create directory if needed
+            if (!fs.existsSync(expanded)) {
+              fs.mkdirSync(expanded, { recursive: true });
+            }
+
+            // Save to config
+            currentConfig.dataDir = customPath;
+            storage.saveConfig(currentConfig);
+            storage.refreshDataDir();
+            
+            console.log(`      ${chalk.green('✓')} Data directory set to: ${expanded}`);
+            dataLocationResult.configured = true;
+            dataLocationResult.path = expanded;
+            dataLocationResult.custom = true;
+          } else {
+            console.log(`      ${chalk.green('✓')} Using default location: ${storage.DATA_DIR}`);
+            dataLocationResult.configured = true;
+            dataLocationResult.path = storage.DATA_DIR;
+          }
+        }
+
+        // Step 2: Quick capture test
+        console.log('\n[2/4] Quick capture test...');
+        let createdEntry = null;
+        if (!hasEntries) {
+          createdEntry = await storage.addEntry({
+            content: 'My first thought',
+            type: config.defaultType || 'idea',
+            source: 'setup'
+          });
           console.log(`      synap add "My first thought"`);
           console.log(`      ${chalk.green('✓')} Created entry ${createdEntry.id.slice(0, 8)}`);
         } else {
           console.log(`      ${chalk.gray('Existing entries detected, skipping.')}`);
         }
 
-        console.log('\n[2/3] Configuration...');
+        // Step 3: Configuration
+        console.log('\n[3/4] Configuration...');
         console.log(`      Default type: ${chalk.cyan(config.defaultType || 'idea')}`);
         console.log(`      Change with: ${chalk.cyan('synap config defaultType todo')}`);
 
-        console.log('\n[3/3] Claude Code Integration');
+        // Step 4: Claude Code Integration
+        console.log('\n[4/4] Claude Code Integration');
         const { confirm } = await import('@inquirer/prompts');
         const shouldInstall = await confirm({
           message: 'Install Claude skill for AI assistance?',
@@ -2105,8 +2174,24 @@ async function main() {
         console.log(`  ${chalk.cyan('synap todo "Something to do"')}`);
         console.log(`  ${chalk.cyan('synap focus')}`);
         console.log(`  ${chalk.cyan('synap review daily')}`);
+        
+        if (dataLocationResult.custom) {
+          console.log(chalk.bold('\n📁 Sync tip:'));
+          console.log(`  Your data is stored in: ${chalk.cyan(dataLocationResult.path)}`);
+          console.log(`  To sync with git: ${chalk.gray('cd ' + dataLocationResult.path + ' && git init')}`);
+        }
         console.log('');
         return;
+      }
+
+      // JSON mode - minimal interaction
+      let createdEntry = null;
+      if (!hasEntries) {
+        createdEntry = await storage.addEntry({
+          content: 'My first thought',
+          type: config.defaultType || 'idea',
+          source: 'setup'
+        });
       }
 
       console.log(JSON.stringify({
@@ -2149,7 +2234,15 @@ async function main() {
       // No key: show all config
       if (!key) {
         if (options.json) {
-          console.log(JSON.stringify({ success: true, config: currentConfig, defaults }, null, 2));
+          console.log(JSON.stringify({ 
+            success: true, 
+            config: currentConfig, 
+            defaults,
+            paths: {
+              configDir: storage.CONFIG_DIR,
+              dataDir: storage.DATA_DIR
+            }
+          }, null, 2));
         } else {
           console.log(chalk.bold('Configuration:\n'));
           for (const [k, v] of Object.entries(currentConfig)) {
@@ -2158,6 +2251,9 @@ async function main() {
             const displayValue = Array.isArray(v) ? v.join(', ') || '(none)' : (v === null ? '(null)' : v);
             console.log(`  ${chalk.cyan(k)}: ${displayValue}${defaultNote}`);
           }
+          console.log(chalk.bold('\nPaths:'));
+          console.log(`  ${chalk.cyan('configDir')}: ${storage.CONFIG_DIR}`);
+          console.log(`  ${chalk.cyan('dataDir')}: ${storage.DATA_DIR}`);
           console.log(chalk.gray('\nUse: synap config <key> <value> to set a value'));
         }
         return;
@@ -2201,16 +2297,42 @@ async function main() {
         parsedValue = value.split(',').map(t => t.trim()).filter(Boolean);
       } else if (key === 'editor' && (value === 'null' || value === '')) {
         parsedValue = null;
+      } else if (key === 'dataDir') {
+        // Handle dataDir specially
+        if (value === 'null' || value === '') {
+          parsedValue = null;
+        } else {
+          // Expand ~ but keep the ~ in storage for portability
+          const expanded = value.replace(/^~/, require('os').homedir());
+          // Create directory if it doesn't exist
+          if (!fs.existsSync(expanded)) {
+            fs.mkdirSync(expanded, { recursive: true });
+            if (!options.json) {
+              console.log(chalk.gray(`Created directory: ${expanded}`));
+            }
+          }
+          // Store the original value (with ~ if used)
+          parsedValue = value;
+        }
       }
 
       currentConfig[key] = parsedValue;
       storage.saveConfig(currentConfig);
+
+      // If dataDir changed, refresh the storage paths
+      if (key === 'dataDir') {
+        storage.refreshDataDir();
+      }
 
       if (options.json) {
         console.log(JSON.stringify({ success: true, key, value: parsedValue }));
       } else {
         const displayValue = Array.isArray(parsedValue) ? parsedValue.join(', ') : parsedValue;
         console.log(chalk.green(`Set ${key} = ${displayValue}`));
+        if (key === 'dataDir') {
+          console.log(chalk.gray(`Data will be stored in: ${storage.DATA_DIR}`));
+          console.log(chalk.yellow('\nNote: Restart synap for changes to take full effect.'));
+        }
       }
     });
 

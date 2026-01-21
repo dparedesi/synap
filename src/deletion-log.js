@@ -1,21 +1,27 @@
 /**
  * deletion-log.js - Audit logging for deleted entries, enables restore
+ * 
+ * The deletion log is stored in DATA_DIR (syncable across devices)
  */
 
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
-
-// Storage directory
-const CONFIG_DIR = process.env.SYNAP_DIR || path.join(os.homedir(), '.config', 'synap');
-const DELETION_LOG_FILE = path.join(CONFIG_DIR, 'deletion-log.json');
+const storage = require('./storage');
 
 /**
- * Ensure config directory exists
+ * Get deletion log file path (dynamic, based on DATA_DIR)
  */
-function ensureConfigDir() {
-  if (!fs.existsSync(CONFIG_DIR)) {
-    fs.mkdirSync(CONFIG_DIR, { recursive: true });
+function getDeletionLogPath() {
+  return path.join(storage.DATA_DIR, 'deletion-log.json');
+}
+
+/**
+ * Ensure data directory exists
+ */
+function ensureDataDir() {
+  const dataDir = storage.DATA_DIR;
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
   }
 }
 
@@ -32,12 +38,13 @@ function atomicWriteSync(filePath, data) {
  * Load deletion log
  */
 function loadLog() {
-  ensureConfigDir();
-  if (!fs.existsSync(DELETION_LOG_FILE)) {
+  ensureDataDir();
+  const logFile = getDeletionLogPath();
+  if (!fs.existsSync(logFile)) {
     return [];
   }
   try {
-    return JSON.parse(fs.readFileSync(DELETION_LOG_FILE, 'utf8'));
+    return JSON.parse(fs.readFileSync(logFile, 'utf8'));
   } catch {
     return [];
   }
@@ -47,8 +54,8 @@ function loadLog() {
  * Save deletion log
  */
 function saveLog(log) {
-  ensureConfigDir();
-  atomicWriteSync(DELETION_LOG_FILE, log);
+  ensureDataDir();
+  atomicWriteSync(getDeletionLogPath(), log);
 }
 
 /**
