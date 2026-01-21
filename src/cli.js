@@ -2035,16 +2035,6 @@ async function main() {
       const os = require('os');
       const path = require('path');
 
-      let hasEntries = false;
-      if (fs.existsSync(storage.ENTRIES_FILE)) {
-        try {
-          const data = JSON.parse(fs.readFileSync(storage.ENTRIES_FILE, 'utf8'));
-          hasEntries = Array.isArray(data.entries) && data.entries.length > 0;
-        } catch {
-          hasEntries = false;
-        }
-      }
-
       let skillResult = { prompted: false };
       let dataLocationResult = { configured: false };
       
@@ -2083,10 +2073,8 @@ async function main() {
           });
 
           if (dataChoice === 'custom') {
-            const defaultSuggestion = path.join(os.homedir(), 'synap-data');
             const customPath = await input({
               message: 'Enter path for synap data:',
-              default: defaultSuggestion,
               validate: (val) => {
                 if (!val.trim()) return 'Path is required';
                 const expanded = val.replace(/^~/, os.homedir());
@@ -2121,20 +2109,10 @@ async function main() {
           }
         }
 
-        // Step 2: Quick capture test
-        console.log('\n[2/4] Quick capture test...');
-        let createdEntry = null;
-        if (!hasEntries) {
-          createdEntry = await storage.addEntry({
-            content: 'My first thought',
-            type: config.defaultType || 'idea',
-            source: 'setup'
-          });
-          console.log(`      synap add "My first thought"`);
-          console.log(`      ${chalk.green('✓')} Created entry ${createdEntry.id.slice(0, 8)}`);
-        } else {
-          console.log(`      ${chalk.gray('Existing entries detected, skipping.')}`);
-        }
+        // Step 2: Quick capture example
+        console.log('\n[2/4] Quick capture...');
+        console.log(`      Try: ${chalk.cyan('synap add "My first thought"')}`);
+        console.log(`      ${chalk.green('✓')} Ready to capture`)
 
         // Step 3: Configuration
         console.log('\n[3/4] Configuration...');
@@ -2185,19 +2163,8 @@ async function main() {
       }
 
       // JSON mode - minimal interaction
-      let createdEntry = null;
-      if (!hasEntries) {
-        createdEntry = await storage.addEntry({
-          content: 'My first thought',
-          type: config.defaultType || 'idea',
-          source: 'setup'
-        });
-      }
-
       console.log(JSON.stringify({
         success: true,
-        mode: hasEntries ? 'existing' : 'first-run',
-        entry: createdEntry,
         config: { defaultType: config.defaultType || 'idea' },
         skill: {
           prompted: false,

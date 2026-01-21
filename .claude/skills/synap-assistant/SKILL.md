@@ -409,7 +409,6 @@ View or update configuration.
 ```bash
 synap config                                 # Show all settings + paths
 synap config dataDir                         # Show data directory
-synap config dataDir ~/synap-data            # Set custom data directory
 synap config --reset                         # Reset to defaults
 ```
 
@@ -417,31 +416,27 @@ synap config --reset                         # Reset to defaults
 
 ### Multi-Device Sync Setup
 
-For users who want to sync their synap across devices:
+For users who want to sync their synap across devices using git:
 
-1. **Set custom data directory:**
+1. **Initialize git in the default data directory:**
    ```bash
-   synap config dataDir ~/synap-data
-   ```
-
-2. **Initialize git (optional):**
-   ```bash
-   cd ~/synap-data
+   cd ~/.local/share/synap
    git init
    git remote add origin git@github.com:user/synap-data.git
+   git push -u origin main
    ```
 
-3. **Daily sync workflow:**
+2. **Daily sync workflow:**
    ```bash
-   cd ~/synap-data && git pull    # Start of day
+   cd ~/.local/share/synap && git pull    # Start of day
    # ... use synap normally ...
-   cd ~/synap-data && git add . && git commit -m "sync" && git push  # End of day
+   cd ~/.local/share/synap && git add . && git commit -m "sync" && git push  # End of day
    ```
 
-4. **On a new device:**
+3. **On a new device:**
    ```bash
-   git clone git@github.com:user/synap-data.git ~/synap-data
-   synap config dataDir ~/synap-data
+   # Clone into the default data directory
+   git clone git@github.com:user/synap-data.git ~/.local/share/synap
    ```
 
 ### Daily Review
