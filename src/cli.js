@@ -2070,7 +2070,7 @@ async function main() {
             message: 'Where should synap store your data?',
             choices: [
               { 
-                name: `Default (${path.join(os.homedir(), '.config', 'synap')})`, 
+                name: `Default (${storage.DATA_DIR})`, 
                 value: 'default',
                 description: 'Recommended for most users'
               },
