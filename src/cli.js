@@ -19,6 +19,11 @@ async function main() {
   const chalk = (await import('chalk')).default;
   const boxen = (await import('boxen')).default;
 
+  // Common requires used across commands
+  const { execSync, spawnSync } = require('child_process');
+  const os = require('os');
+  const path = require('path');
+
   // Check for updates (non-blocking)
   const updateNotifier = (await import('update-notifier')).default;
   updateNotifier({ pkg }).notify();
@@ -102,7 +107,6 @@ async function main() {
 
   // Helper: Check if working tree has uncommitted changes
   const isDirty = () => {
-    const { execSync } = require('child_process');
     const dataDir = storage.getDataDir();
     try {
       execSync('git diff --quiet', { cwd: dataDir, stdio: 'pipe' });
@@ -115,7 +119,6 @@ async function main() {
 
   // Helper: Check if there are merge conflicts (UU, AA, DD, etc.)
   const hasConflicts = () => {
-    const { execSync } = require('child_process');
     const dataDir = storage.getDataDir();
     try {
       const status = execSync('git status --porcelain', { cwd: dataDir, encoding: 'utf-8' });
@@ -128,7 +131,6 @@ async function main() {
 
   // Helper: Get list of conflicted files
   const getConflictFiles = () => {
-    const { execSync } = require('child_process');
     const dataDir = storage.getDataDir();
     try {
       const status = execSync('git status --porcelain', { cwd: dataDir, encoding: 'utf-8' });
@@ -142,7 +144,6 @@ async function main() {
 
   // Helper: Check if git remote is configured
   const hasRemote = () => {
-    const { execSync } = require('child_process');
     const dataDir = storage.getDataDir();
     try {
       const remotes = execSync('git remote', { cwd: dataDir, encoding: 'utf-8' });
@@ -152,17 +153,21 @@ async function main() {
     }
   };
 
-  // Helper: Get diff stats for preview
+  // Helper: Get diff stats for preview without staging/unstaging
   const getDiffStats = () => {
-    const { execSync } = require('child_process');
     const dataDir = storage.getDataDir();
     try {
-      // Stage all first to see what would be committed
-      execSync('git add .', { cwd: dataDir, stdio: 'pipe' });
-      const stats = execSync('git diff --cached --stat', { cwd: dataDir, encoding: 'utf-8' });
-      // Unstage to leave working tree clean
-      execSync('git reset HEAD', { cwd: dataDir, stdio: 'pipe' });
-      return stats.trim();
+      const status = execSync('git status --porcelain', { cwd: dataDir, encoding: 'utf-8' });
+      if (!status.trim()) return '';
+
+      const unstaged = execSync('git diff --stat', { cwd: dataDir, encoding: 'utf-8' });
+      const untracked = status.split('\n').filter(l => l.startsWith('??')).length;
+
+      let result = unstaged.trim();
+      if (untracked > 0) {
+        result += `\n ${untracked} untracked file(s)`;
+      }
+      return result;
     } catch {
       return '';
     }
@@ -750,6 +755,7 @@ async function main() {
     .option('-s, --status <status>', 'Filter by status')
     .option('--not-type <type>', 'Exclude entries of this type')
     .option('--since <duration>', 'Only search recent entries')
+    .option('--include-archived', 'Include archived entries in search')
     .option('-n, --limit <n>', 'Max results', '20')
     .option('--json', 'Output as JSON')
     .action(async (queryParts, options) => {
@@ -759,6 +765,7 @@ async function main() {
         status: options.status,
         notType: options.notType,
         since: options.since,
+        includeArchived: options.includeArchived,
         limit: parseInt(options.limit, 10)
       });
 
@@ -823,11 +830,6 @@ async function main() {
 
       if (Object.keys(updates).length === 0) {
         // Interactive edit - open $EDITOR
-        const { execSync } = require('child_process');
-        const fs = require('fs');
-        const os = require('os');
-        const path = require('path');
-
         const tmpFile = path.join(os.tmpdir(), `synap-${entry.id.slice(0, 8)}.txt`);
         fs.writeFileSync(tmpFile, entry.content);
 
@@ -1855,8 +1857,6 @@ async function main() {
           }
 
           preferences.loadPreferences();
-          const { execSync } = require('child_process');
-          const fs = require('fs');
 
           const editor = config.editor || process.env.EDITOR || 'vi';
           const preferencesPath = preferences.getPreferencesPath();
@@ -2488,7 +2488,6 @@ async function main() {
     .option('--no-push', 'Commit but do not push to remote')
     .option('--json', 'Output as JSON')
     .action(async (messageParts, options) => {
-      const { execSync, spawnSync } = require('child_process');
       const dataDir = storage.getDataDir();
 
       if (!isGitRepo()) {
@@ -2640,7 +2639,6 @@ async function main() {
     .option('--force', 'Pull even if there are uncommitted local changes')
     .option('--json', 'Output as JSON')
     .action(async (options) => {
-      const { execSync } = require('child_process');
       const dataDir = storage.getDataDir();
 
       if (!isGitRepo()) {
@@ -2725,7 +2723,6 @@ async function main() {
     .option('--no-push', 'Commit but do not push to remote')
     .option('--json', 'Output as JSON')
     .action(async (messageParts, options) => {
-      const { execSync, spawnSync } = require('child_process');
       const dataDir = storage.getDataDir();
 
       if (!isGitRepo()) {

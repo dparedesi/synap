@@ -8,6 +8,8 @@ const fs = require('fs');
 const path = require('path');
 const storage = require('./storage');
 
+const MAX_DELETION_LOG_ENTRIES = 1000;
+
 /**
  * Get deletion log file path (dynamic, based on DATA_DIR)
  */
@@ -73,9 +75,9 @@ async function logDeletions(entries) {
     });
   }
 
-  // Keep last 1000 deletions
-  if (log.length > 1000) {
-    log.length = 1000;
+  // Keep last N deletions
+  if (log.length > MAX_DELETION_LOG_ENTRIES) {
+    log.length = MAX_DELETION_LOG_ENTRIES;
   }
 
   saveLog(log);

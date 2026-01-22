@@ -127,9 +127,10 @@ const VALID_DATE_FORMATS = ['relative', 'absolute', 'locale'];
 
 /**
  * Atomic file write - write to temp file then rename
+ * Uses PID + timestamp to avoid race conditions between processes
  */
 function atomicWriteSync(filePath, data) {
-  const tmpPath = filePath + '.tmp';
+  const tmpPath = `${filePath}.tmp.${process.pid}.${Date.now()}`;
   fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2));
   fs.renameSync(tmpPath, filePath);
 }
@@ -144,7 +145,9 @@ function loadEntries() {
   }
   try {
     return JSON.parse(fs.readFileSync(ENTRIES_FILE, 'utf8'));
-  } catch {
+  } catch (err) {
+    console.error(`Warning: entries.json is corrupted: ${err.message}`);
+    console.error(`File location: ${ENTRIES_FILE}`);
     return { version: 1, entries: [] };
   }
 }
@@ -167,7 +170,9 @@ function loadArchive() {
   }
   try {
     return JSON.parse(fs.readFileSync(ARCHIVE_FILE, 'utf8'));
-  } catch {
+  } catch (err) {
+    console.error(`Warning: archive.json is corrupted: ${err.message}`);
+    console.error(`File location: ${ARCHIVE_FILE}`);
     return { version: 1, entries: [] };
   }
 }
@@ -422,15 +427,13 @@ function parseDate(input) {
 }
 
 /**
- * Add a new entry
+ * Create an entry object from options (shared by addEntry and addEntries)
  */
-async function addEntry(options) {
-  const data = loadEntries();
-
+function createEntry(options, existingEntries, timestamp) {
   // Resolve partial parent ID to full ID
   let parentId = options.parent;
   if (parentId) {
-    const parentEntry = data.entries.find(e => e.id.startsWith(parentId));
+    const parentEntry = existingEntries.find(e => e.id.startsWith(parentId));
     if (parentEntry) {
       parentId = parentEntry.id;
     }
@@ -446,7 +449,6 @@ async function addEntry(options) {
     }
   }
 
-  const now = new Date().toISOString();
   const entry = {
     id: uuidv4(),
     content: options.content,
@@ -458,8 +460,8 @@ async function addEntry(options) {
     parent: parentId || undefined,
     related: [],
     due: dueDate,
-    createdAt: now,
-    updatedAt: now,
+    createdAt: timestamp,
+    updatedAt: timestamp,
     source: options.source || 'cli'
   };
 
@@ -467,6 +469,17 @@ async function addEntry(options) {
   Object.keys(entry).forEach(key => {
     if (entry[key] === undefined) delete entry[key];
   });
+
+  return entry;
+}
+
+/**
+ * Add a new entry
+ */
+async function addEntry(options) {
+  const data = loadEntries();
+  const now = new Date().toISOString();
+  const entry = createEntry(options, data.entries, now);
 
   data.entries.push(entry);
   saveEntries(data);
@@ -485,46 +498,7 @@ async function addEntries(entriesData) {
   const now = new Date().toISOString();
 
   for (const options of entriesData) {
-    // Resolve partial parent ID to full ID
-    let parentId = options.parent;
-    if (parentId) {
-      const parentEntry = data.entries.find(e => e.id.startsWith(parentId));
-      if (parentEntry) {
-        parentId = parentEntry.id;
-      }
-    }
-
-    // Parse due date if provided
-    let dueDate = undefined;
-    const dueInput = typeof options.due === 'string' ? options.due.trim() : options.due;
-    if (dueInput) {
-      dueDate = parseDate(dueInput);
-      if (!dueDate) {
-        throw new Error(`Invalid due date: ${options.due}`);
-      }
-    }
-
-    const entry = {
-      id: uuidv4(),
-      content: options.content,
-      title: options.title || extractTitle(options.content),
-      type: VALID_TYPES.includes(options.type) ? options.type : 'idea',
-      status: VALID_STATUSES.includes(options.status) ? options.status : (options.priority ? 'active' : 'raw'),
-      priority: options.priority && [1, 2, 3].includes(options.priority) ? options.priority : undefined,
-      tags: options.tags || [],
-      parent: parentId || undefined,
-      related: [],
-      due: dueDate,
-      createdAt: now,
-      updatedAt: now,
-      source: options.source || 'cli'
-    };
-
-    // Clean up undefined fields
-    Object.keys(entry).forEach(key => {
-      if (entry[key] === undefined) delete entry[key];
-    });
-
+    const entry = createEntry(options, data.entries, now);
     data.entries.push(entry);
     created.push(entry);
   }
@@ -552,9 +526,15 @@ async function getEntry(id) {
   let entry = data.entries.find(e => e.id === id);
   if (entry) return entry;
 
-  // Try partial match (first 8 chars)
+  // Try partial match
   const matches = data.entries.filter(e => e.id.startsWith(id));
   if (matches.length === 1) return matches[0];
+  if (matches.length > 1) {
+    const error = new Error(`Ambiguous ID: ${id} matches ${matches.length} entries`);
+    error.code = 'AMBIGUOUS_ID';
+    error.matches = matches.map(e => ({ id: e.id, title: e.title }));
+    throw error;
+  }
 
   // Check archive
   const archive = loadArchive();
@@ -563,6 +543,12 @@ async function getEntry(id) {
 
   const archiveMatches = archive.entries.filter(e => e.id.startsWith(id));
   if (archiveMatches.length === 1) return archiveMatches[0];
+  if (archiveMatches.length > 1) {
+    const error = new Error(`Ambiguous ID: ${id} matches ${archiveMatches.length} archived entries`);
+    error.code = 'AMBIGUOUS_ID';
+    error.matches = archiveMatches.map(e => ({ id: e.id, title: e.title }));
+    throw error;
+  }
 
   return null;
 }
@@ -584,8 +570,7 @@ async function getEntriesByIds(ids) {
  */
 async function getChildren(parentId) {
   const data = loadEntries();
-  // Match if parent starts with the given ID OR if the given ID starts with parent
-  return data.entries.filter(e => e.parent && (e.parent.startsWith(parentId) || parentId.startsWith(e.parent)));
+  return data.entries.filter(e => e.parent && e.parent.startsWith(parentId));
 }
 
 /**
@@ -763,6 +748,12 @@ async function listEntries(query = {}) {
 async function searchEntries(query, options = {}) {
   const data = loadEntries();
   let entries = [...data.entries];
+
+  // Include archived entries if requested
+  if (options.includeArchived) {
+    const archive = loadArchive();
+    entries = [...entries, ...archive.entries];
+  }
 
   const lowerQuery = query.toLowerCase();
 
@@ -1006,6 +997,7 @@ async function renameTag(oldTag, newTag) {
     const idx = entry.tags.indexOf(oldTag);
     if (idx !== -1) {
       entry.tags[idx] = newTag;
+      entry.tags = [...new Set(entry.tags)];
       entry.updatedAt = new Date().toISOString();
       count++;
     }
@@ -1015,6 +1007,7 @@ async function renameTag(oldTag, newTag) {
     const idx = entry.tags.indexOf(oldTag);
     if (idx !== -1) {
       entry.tags[idx] = newTag;
+      entry.tags = [...new Set(entry.tags)];
       entry.updatedAt = new Date().toISOString();
       count++;
     }
@@ -1091,8 +1084,17 @@ async function importEntries(entries, options = {}) {
   const data = loadEntries();
   let added = 0;
   let updated = 0;
+  let skipped = 0;
 
   for (const entry of entries) {
+    // Validate required fields
+    if (!entry.id || typeof entry.id !== 'string' ||
+        !entry.content || typeof entry.content !== 'string' ||
+        !entry.createdAt || typeof entry.createdAt !== 'string') {
+      skipped++;
+      continue;
+    }
+
     const existing = data.entries.find(e => e.id === entry.id);
 
     if (existing) {
@@ -1109,7 +1111,7 @@ async function importEntries(entries, options = {}) {
 
   saveEntries(data);
 
-  return { added, updated };
+  return { added, updated, skipped };
 }
 
 module.exports = {
