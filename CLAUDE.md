@@ -2,6 +2,8 @@
 
 A CLI for externalizing your working memory - capture ideas, projects, features, todos, and questions.
 
+> **⚠️ This is the source repository.** Never edit files at `/opt/homebrew/lib/node_modules/synap/` or `~/.claude/skills/synap-assistant/` directly — those are installed copies. All changes must be made here, then released via `gh release create`. Users (including yourself when dogfooding) install updates via `npm i -g synap`.
+
 ## Project Structure
 
 ```
@@ -15,7 +17,7 @@ src/
     user-preferences-template.md # Default preferences template
 
 test/
-  *.test.js        # Test suite (16 files, vitest)
+  *.test.js        # Test suite (17 files, vitest)
 
 scripts/
   postinstall.js   # npm postinstall - shows hints
@@ -103,8 +105,39 @@ interface Entry {
 | `synap link <id1> <id2>` | Link entries (--as-parent, --as-child, --unlink) |
 | `synap export` | Export entries (--file, --format, --type, --status) |
 | `synap import <file>` | Import entries (--merge, --skip-existing, --dry-run) |
+| `synap save [message]` | Commit + push synap data to git |
+| `synap pull` | Pull latest synap data from git |
+| `synap sync [message]` | Pull then save (full round-trip) |
 
 Capture commands accept `--due` (YYYY-MM-DD, 3d/1w, weekday names: monday/friday, or keywords: today, tomorrow, next monday).
+
+### Git Sync Options
+
+```bash
+# save command
+synap save "message"        # Commit and push
+synap save --dry-run        # Preview changes without committing
+synap save --no-push        # Commit locally, don't push
+
+# pull command
+synap pull                  # Pull from remote
+synap pull --force          # Pull even with uncommitted local changes
+
+# sync command (pull + save)
+synap sync "message"        # Full round-trip
+synap sync --dry-run        # Preview what would happen
+synap sync --no-push        # Pull and commit, but don't push
+```
+
+### Git Sync Error Codes
+
+| Code | Meaning |
+|------|---------|
+| `NOT_GIT_REPO` | Data directory is not a git repository |
+| `DIRTY_WORKING_TREE` | Uncommitted changes block pull (use `--force`) |
+| `MERGE_CONFLICT` | Pull resulted in merge conflicts |
+| `NO_REMOTE` | No git remote configured |
+| `PUSH_FAILED` | Remote exists but push failed |
 
 ### Enhanced Filters (v0.3.0)
 

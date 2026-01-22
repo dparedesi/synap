@@ -412,31 +412,65 @@ synap config dataDir                         # Show data directory
 synap config --reset                         # Reset to defaults
 ```
 
+#### `synap save`, `synap pull`, `synap sync`
+Git sync commands for multi-device workflow.
+
+```bash
+# Save (commit + push)
+synap save                                   # Commit + push with auto timestamp
+synap save "message"                         # Commit + push with custom message
+synap save -m "message"                      # Same as above
+synap save --dry-run                         # Preview changes without committing
+synap save --no-push                         # Commit locally, don't push
+
+# Pull
+synap pull                                   # Pull latest from remote
+synap pull --force                           # Pull even with uncommitted local changes
+
+# Sync (pull + save)
+synap sync                                   # Pull then save (full round-trip)
+synap sync "end of day"                      # Sync with custom commit message
+synap sync --dry-run                         # Preview what would happen
+synap sync --no-push                         # Pull and commit, but don't push
+```
+
+**Git sync error codes:**
+| Code | Meaning |
+|------|---------|
+| `NOT_GIT_REPO` | Data directory is not a git repository |
+| `DIRTY_WORKING_TREE` | Uncommitted changes block pull (use `--force`) |
+| `MERGE_CONFLICT` | Pull resulted in merge conflicts |
+| `NO_REMOTE` | No git remote configured |
+| `PUSH_FAILED` | Remote exists but push failed |
+
 ## Workflow Patterns
 
 ### Multi-Device Sync Setup
 
-For users who want to sync their synap across devices using git:
-
-1. **Initialize git in the default data directory:**
+1. **Set data directory:**
    ```bash
-   cd ~/.local/share/synap
+   synap config dataDir ~/synap-data
+   ```
+
+2. **Initialize git (one-time):**
+   ```bash
+   cd $(synap config dataDir)
    git init
    git remote add origin git@github.com:user/synap-data.git
-   git push -u origin main
+   synap save "Initial commit"
    ```
 
-2. **Daily sync workflow:**
+3. **Daily workflow:**
    ```bash
-   cd ~/.local/share/synap && git pull    # Start of day
-   # ... use synap normally ...
-   cd ~/.local/share/synap && git add . && git commit -m "sync" && git push  # End of day
+   synap pull    # Start of day
+   synap save    # End of day
+   synap sync    # Or full round-trip
    ```
 
-3. **On a new device:**
+4. **New device:**
    ```bash
-   # Clone into the default data directory
-   git clone git@github.com:user/synap-data.git ~/.local/share/synap
+   git clone git@github.com:user/synap-data.git ~/synap-data
+   synap config dataDir ~/synap-data
    ```
 
 ### Daily Review
@@ -562,6 +596,13 @@ For projects requiring ongoing progress logging (standups, journals, learning lo
 3. **Log before delete** - All deletions are recoverable via `synap restore`
 4. **Confirm bulk operations** - Operations affecting >10 entries require confirmation
 5. **Don't over-organize** - Simple thoughts don't need tags, priorities, and parents
+
+**Git sync safety**:
+
+6. **Preview before sync** - Use `--dry-run` to preview changes before committing
+7. **Handle conflicts carefully** - `MERGE_CONFLICT` errors require manual resolution
+8. **Protect uncommitted work** - `pull` checks for dirty tree; use `--force` only when safe
+9. **Commit messages are safe** - Never executed as shell commands (stdin-based commit)
 
 ## Proactive Recommendation Patterns
 

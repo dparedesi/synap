@@ -93,6 +93,81 @@ async function main() {
     return '(<1m)';
   };
 
+  // Helper: Check if data directory is a git repo
+  const isGitRepo = () => {
+    const path = require('path');
+    const gitDir = path.join(storage.getDataDir(), '.git');
+    return fs.existsSync(gitDir);
+  };
+
+  // Helper: Check if working tree has uncommitted changes
+  const isDirty = () => {
+    const { execSync } = require('child_process');
+    const dataDir = storage.getDataDir();
+    try {
+      execSync('git diff --quiet', { cwd: dataDir, stdio: 'pipe' });
+      execSync('git diff --cached --quiet', { cwd: dataDir, stdio: 'pipe' });
+      return false;
+    } catch {
+      return true;
+    }
+  };
+
+  // Helper: Check if there are merge conflicts (UU, AA, DD, etc.)
+  const hasConflicts = () => {
+    const { execSync } = require('child_process');
+    const dataDir = storage.getDataDir();
+    try {
+      const status = execSync('git status --porcelain', { cwd: dataDir, encoding: 'utf-8' });
+      const conflictPatterns = /^(UU|AA|DD|AU|UA|DU|UD) /m;
+      return conflictPatterns.test(status);
+    } catch {
+      return false;
+    }
+  };
+
+  // Helper: Get list of conflicted files
+  const getConflictFiles = () => {
+    const { execSync } = require('child_process');
+    const dataDir = storage.getDataDir();
+    try {
+      const status = execSync('git status --porcelain', { cwd: dataDir, encoding: 'utf-8' });
+      return status.split('\n')
+        .filter(line => /^(UU|AA|DD|AU|UA|DU|UD) /.test(line))
+        .map(line => line.slice(3).trim());
+    } catch {
+      return [];
+    }
+  };
+
+  // Helper: Check if git remote is configured
+  const hasRemote = () => {
+    const { execSync } = require('child_process');
+    const dataDir = storage.getDataDir();
+    try {
+      const remotes = execSync('git remote', { cwd: dataDir, encoding: 'utf-8' });
+      return remotes.trim().length > 0;
+    } catch {
+      return false;
+    }
+  };
+
+  // Helper: Get diff stats for preview
+  const getDiffStats = () => {
+    const { execSync } = require('child_process');
+    const dataDir = storage.getDataDir();
+    try {
+      // Stage all first to see what would be committed
+      execSync('git add .', { cwd: dataDir, stdio: 'pipe' });
+      const stats = execSync('git diff --cached --stat', { cwd: dataDir, encoding: 'utf-8' });
+      // Unstage to leave working tree clean
+      execSync('git reset HEAD', { cwd: dataDir, stdio: 'pipe' });
+      return stats.trim();
+    } catch {
+      return '';
+    }
+  };
+
   // ============================================
   // CAPTURE COMMANDS
   // ============================================
@@ -2398,6 +2473,422 @@ async function main() {
         } else if (result.skipped) {
           console.log(chalk.yellow('Skill already up to date'));
         }
+      }
+    });
+
+  // ============================================
+  // SYNC COMMANDS
+  // ============================================
+
+  program
+    .command('save [message...]')
+    .description('Commit and push synap data to git remote')
+    .option('-m, --message <message>', 'Commit message')
+    .option('--dry-run', 'Show what would be committed without committing')
+    .option('--no-push', 'Commit but do not push to remote')
+    .option('--json', 'Output as JSON')
+    .action(async (messageParts, options) => {
+      const { execSync, spawnSync } = require('child_process');
+      const dataDir = storage.getDataDir();
+
+      if (!isGitRepo()) {
+        if (options.json) {
+          console.log(JSON.stringify({
+            success: false,
+            error: 'Data directory is not a git repository',
+            code: 'NOT_GIT_REPO',
+            setup: [
+              `cd ${dataDir}`,
+              'git init',
+              'git remote add origin git@github.com:user/synap-data.git',
+              'synap save "Initial commit"'
+            ]
+          }, null, 2));
+        } else {
+          console.error(chalk.red('Data directory is not a git repository'));
+          console.log(chalk.gray('\nSetup git sync:'));
+          console.log(chalk.cyan(`  cd ${dataDir}`));
+          console.log(chalk.cyan('  git init'));
+          console.log(chalk.cyan('  git remote add origin git@github.com:user/synap-data.git'));
+          console.log(chalk.cyan('  synap save "Initial commit"'));
+        }
+        process.exit(1);
+      }
+
+      // Build commit message
+      let commitMessage = options.message;
+      if (!commitMessage && messageParts && messageParts.length > 0) {
+        commitMessage = messageParts.join(' ');
+      }
+      if (!commitMessage) {
+        const now = new Date();
+        const timestamp = now.toISOString().replace('T', ' ').slice(0, 16);
+        commitMessage = `synap sync ${timestamp}`;
+      }
+
+      // Dry-run mode: show preview only
+      if (options.dryRun) {
+        const stats = getDiffStats();
+        if (options.json) {
+          console.log(JSON.stringify({
+            success: true,
+            dryRun: true,
+            message: commitMessage,
+            changes: stats || 'No changes to commit'
+          }, null, 2));
+        } else {
+          console.log(chalk.cyan('Dry run - would commit with message:'));
+          console.log(chalk.yellow(`  "${commitMessage}"`));
+          if (stats) {
+            console.log(chalk.cyan('\nChanges:'));
+            console.log(stats);
+          } else {
+            console.log(chalk.yellow('No changes to commit'));
+          }
+        }
+        return;
+      }
+
+      try {
+        // Stage all changes
+        execSync('git add .', { cwd: dataDir, stdio: 'pipe' });
+
+        // Check if there are changes to commit
+        let hasChanges = true;
+        try {
+          execSync('git diff --cached --quiet', { cwd: dataDir, stdio: 'pipe' });
+          hasChanges = false;
+        } catch {
+          // Non-zero exit means there are staged changes
+          hasChanges = true;
+        }
+
+        if (!hasChanges) {
+          if (options.json) {
+            console.log(JSON.stringify({ success: true, message: 'Nothing to commit', pushed: false }));
+          } else {
+            console.log(chalk.yellow('Nothing to commit'));
+          }
+          return;
+        }
+
+        // Commit using stdin to prevent shell injection
+        const commitResult = spawnSync('git', ['commit', '-F', '-'], {
+          cwd: dataDir,
+          input: commitMessage,
+          encoding: 'utf-8',
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
+
+        if (commitResult.status !== 0) {
+          throw new Error(commitResult.stderr || 'Commit failed');
+        }
+
+        // Push (unless --no-push flag)
+        let pushed = false;
+        let pushError = null;
+        let pushErrorCode = null;
+
+        if (options.push !== false) {
+          // Check if remote exists
+          if (!hasRemote()) {
+            pushError = 'No git remote configured';
+            pushErrorCode = 'NO_REMOTE';
+          } else {
+            try {
+              execSync('git push', { cwd: dataDir, stdio: 'pipe' });
+              pushed = true;
+            } catch (err) {
+              pushError = 'Push failed (check network or remote permissions)';
+              pushErrorCode = 'PUSH_FAILED';
+            }
+          }
+        } else {
+          pushError = 'Push skipped (--no-push flag)';
+        }
+
+        if (options.json) {
+          const result = {
+            success: true,
+            message: commitMessage,
+            pushed
+          };
+          if (pushError) result.pushError = pushError;
+          if (pushErrorCode) result.pushErrorCode = pushErrorCode;
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          console.log(chalk.green(`Committed: "${commitMessage}"`));
+          if (pushed) {
+            console.log(chalk.green('Pushed to remote'));
+          } else {
+            console.log(chalk.yellow(pushError));
+          }
+        }
+      } catch (err) {
+        if (options.json) {
+          console.log(JSON.stringify({ success: false, error: err.message, code: 'GIT_ERROR' }));
+        } else {
+          console.error(chalk.red(`Git error: ${err.message}`));
+        }
+        process.exit(1);
+      }
+    });
+
+  program
+    .command('pull')
+    .description('Pull latest synap data from git remote')
+    .option('--force', 'Pull even if there are uncommitted local changes')
+    .option('--json', 'Output as JSON')
+    .action(async (options) => {
+      const { execSync } = require('child_process');
+      const dataDir = storage.getDataDir();
+
+      if (!isGitRepo()) {
+        if (options.json) {
+          console.log(JSON.stringify({
+            success: false,
+            error: 'Data directory is not a git repository',
+            code: 'NOT_GIT_REPO'
+          }, null, 2));
+        } else {
+          console.error(chalk.red('Data directory is not a git repository'));
+          console.log(chalk.gray('Run: synap save --help for setup instructions'));
+        }
+        process.exit(1);
+      }
+
+      // Check for uncommitted changes
+      if (isDirty() && !options.force) {
+        if (options.json) {
+          console.log(JSON.stringify({
+            success: false,
+            error: 'Working tree has uncommitted changes',
+            code: 'DIRTY_WORKING_TREE',
+            hint: 'Run `synap save` first or use `--force`'
+          }, null, 2));
+        } else {
+          console.error(chalk.red('Working tree has uncommitted changes'));
+          console.log(chalk.gray('Run `synap save` first or use `synap pull --force`'));
+        }
+        process.exit(1);
+      }
+
+      try {
+        const output = execSync('git pull', { cwd: dataDir, encoding: 'utf-8' });
+
+        if (options.json) {
+          console.log(JSON.stringify({
+            success: true,
+            message: output.trim() || 'Already up to date',
+            updated: !output.includes('Already up to date')
+          }, null, 2));
+        } else {
+          console.log(chalk.green(output.trim() || 'Already up to date'));
+        }
+      } catch (err) {
+        // Check for merge conflicts after failed pull
+        if (hasConflicts()) {
+          const conflictFiles = getConflictFiles();
+          if (options.json) {
+            console.log(JSON.stringify({
+              success: false,
+              error: 'Merge conflicts detected',
+              code: 'MERGE_CONFLICT',
+              conflictFiles,
+              hint: `Resolve conflicts: cd ${dataDir} && git status`
+            }, null, 2));
+          } else {
+            console.error(chalk.red('Merge conflicts detected'));
+            console.log(chalk.yellow('Conflicted files:'));
+            for (const file of conflictFiles) {
+              console.log(chalk.yellow(`  - ${file}`));
+            }
+            console.log(chalk.gray(`\nResolve conflicts: cd ${dataDir} && git status`));
+          }
+          process.exit(1);
+        }
+
+        if (options.json) {
+          console.log(JSON.stringify({ success: false, error: err.message, code: 'GIT_ERROR' }));
+        } else {
+          console.error(chalk.red(`Git error: ${err.message}`));
+        }
+        process.exit(1);
+      }
+    });
+
+  program
+    .command('sync [message...]')
+    .description('Pull latest, then commit and push (full round-trip)')
+    .option('-m, --message <message>', 'Commit message')
+    .option('--dry-run', 'Show what would be committed without committing')
+    .option('--no-push', 'Commit but do not push to remote')
+    .option('--json', 'Output as JSON')
+    .action(async (messageParts, options) => {
+      const { execSync, spawnSync } = require('child_process');
+      const dataDir = storage.getDataDir();
+
+      if (!isGitRepo()) {
+        if (options.json) {
+          console.log(JSON.stringify({
+            success: false,
+            error: 'Data directory is not a git repository',
+            code: 'NOT_GIT_REPO'
+          }, null, 2));
+        } else {
+          console.error(chalk.red('Data directory is not a git repository'));
+          console.log(chalk.gray('Run: synap save --help for setup instructions'));
+        }
+        process.exit(1);
+      }
+
+      // Build commit message
+      let commitMessage = options.message;
+      if (!commitMessage && messageParts && messageParts.length > 0) {
+        commitMessage = messageParts.join(' ');
+      }
+      if (!commitMessage) {
+        const now = new Date();
+        const timestamp = now.toISOString().replace('T', ' ').slice(0, 16);
+        commitMessage = `synap sync ${timestamp}`;
+      }
+
+      // Dry-run mode: show preview only
+      if (options.dryRun) {
+        const stats = getDiffStats();
+        if (options.json) {
+          console.log(JSON.stringify({
+            success: true,
+            dryRun: true,
+            message: commitMessage,
+            changes: stats || 'No changes to commit'
+          }, null, 2));
+        } else {
+          console.log(chalk.cyan('Dry run - would sync with message:'));
+          console.log(chalk.yellow(`  "${commitMessage}"`));
+          if (stats) {
+            console.log(chalk.cyan('\nLocal changes:'));
+            console.log(stats);
+          } else {
+            console.log(chalk.yellow('No local changes to commit'));
+          }
+        }
+        return;
+      }
+
+      const results = { pulled: false, committed: false, pushed: false, errors: [] };
+
+      // Pull first
+      try {
+        const pullOutput = execSync('git pull', { cwd: dataDir, encoding: 'utf-8' });
+        results.pulled = true;
+        results.pullMessage = pullOutput.trim() || 'Already up to date';
+      } catch (err) {
+        // Check for merge conflicts
+        if (hasConflicts()) {
+          const conflictFiles = getConflictFiles();
+          results.errors.push({
+            step: 'pull',
+            error: 'Merge conflicts detected',
+            code: 'MERGE_CONFLICT',
+            conflictFiles,
+            hint: `Resolve conflicts: cd ${dataDir} && git status`
+          });
+        } else {
+          results.errors.push({ step: 'pull', error: err.message, code: 'GIT_ERROR' });
+        }
+      }
+
+      // Stage and commit (only if pull succeeded)
+      if (results.pulled) {
+        try {
+          execSync('git add .', { cwd: dataDir, stdio: 'pipe' });
+
+          let hasChanges = true;
+          try {
+            execSync('git diff --cached --quiet', { cwd: dataDir, stdio: 'pipe' });
+            hasChanges = false;
+          } catch {
+            hasChanges = true;
+          }
+
+          if (hasChanges) {
+            // Commit using stdin to prevent shell injection
+            const commitResult = spawnSync('git', ['commit', '-F', '-'], {
+              cwd: dataDir,
+              input: commitMessage,
+              encoding: 'utf-8',
+              stdio: ['pipe', 'pipe', 'pipe']
+            });
+
+            if (commitResult.status !== 0) {
+              throw new Error(commitResult.stderr || 'Commit failed');
+            }
+
+            results.committed = true;
+            results.commitMessage = commitMessage;
+          } else {
+            results.commitMessage = 'Nothing to commit';
+          }
+        } catch (err) {
+          results.errors.push({ step: 'commit', error: err.message, code: 'GIT_ERROR' });
+        }
+      }
+
+      // Push (unless --no-push flag or nothing committed)
+      if (results.committed && options.push !== false) {
+        if (!hasRemote()) {
+          results.errors.push({ step: 'push', error: 'No git remote configured', code: 'NO_REMOTE' });
+        } else {
+          try {
+            execSync('git push', { cwd: dataDir, stdio: 'pipe' });
+            results.pushed = true;
+          } catch (err) {
+            results.errors.push({ step: 'push', error: 'Push failed (check network or remote permissions)', code: 'PUSH_FAILED' });
+          }
+        }
+      } else if (results.committed && options.push === false) {
+        results.pushSkipped = true;
+      }
+
+      if (options.json) {
+        console.log(JSON.stringify({
+          success: results.errors.length === 0,
+          ...results
+        }, null, 2));
+      } else {
+        if (results.pulled) {
+          console.log(chalk.green(`Pulled: ${results.pullMessage}`));
+        }
+        if (results.committed) {
+          console.log(chalk.green(`Committed: "${results.commitMessage}"`));
+        } else if (results.pullMessage !== 'Already up to date' || !results.pulled) {
+          console.log(chalk.yellow(results.commitMessage || 'Nothing to commit'));
+        }
+        if (results.pushed) {
+          console.log(chalk.green('Pushed to remote'));
+        } else if (results.pushSkipped) {
+          console.log(chalk.yellow('Push skipped (--no-push flag)'));
+        } else if (results.committed) {
+          const pushErr = results.errors.find(e => e.step === 'push');
+          console.log(chalk.yellow(pushErr ? pushErr.error : 'Push failed'));
+        }
+        for (const err of results.errors) {
+          if (err.step !== 'push' || !results.committed) {
+            console.error(chalk.red(`${err.step}: ${err.error}`));
+          }
+          if (err.conflictFiles) {
+            console.log(chalk.yellow('Conflicted files:'));
+            for (const file of err.conflictFiles) {
+              console.log(chalk.yellow(`  - ${file}`));
+            }
+            console.log(chalk.gray(`\n${err.hint}`));
+          }
+        }
+      }
+
+      if (results.errors.length > 0) {
+        process.exit(1);
       }
     });
 
